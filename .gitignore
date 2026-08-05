@@ -1,0 +1,19 @@
+# --- .NET ---
+bin/
+obj/
+*.user
+backend/src/Api/appsettings.Development.json
+backend/src/Api/appsettings.Local.json
+
+# --- Node / Next.js (frontend arrives in a later pass) ---
+node_modules/
+.next/
+out/
+frontend/.env.local
+
+# --- General ---
+.env
+.vs/
+.vscode/
+*.log
+.DS_Store

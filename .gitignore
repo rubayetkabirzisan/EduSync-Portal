@@ -11,9 +11,16 @@ node_modules/
 out/
 frontend/.env.local
 
+# --- Playwright ---
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+e2e/playwright/.cache/
+
 # --- General ---
 .env
 .vs/
 .vscode/
 *.log
 .DS_Store
+Thumbs.db

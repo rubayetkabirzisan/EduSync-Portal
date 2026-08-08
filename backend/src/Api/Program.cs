@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 using Serilog;
 
 // ── Bootstrap Serilog ──────────────────────────────────────────────
@@ -120,8 +121,36 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.MigrateAsync();
-        await DbSeeder.SeedAsync(db);
+        try
+        {
+            await db.Database.MigrateAsync();
+        }
+        catch (PostgresException ex) when (ex.SqlState == "42P07")
+        {
+            Log.Warning("Database tables already exist in Supabase/PostgreSQL. Syncing migration history...");
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") VALUES ('20260807082704_InitialCreate', '10.0.0') ON CONFLICT DO NOTHING;");
+            }
+            catch (Exception recordEx)
+            {
+                Log.Warning(recordEx, "Could not record migration history; continuing with existing schema.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Migration encountered an exception; attempting to seed and continue...");
+        }
+
+        try
+        {
+            await DbSeeder.SeedAsync(db);
+        }
+        catch (Exception seedEx)
+        {
+            Log.Warning(seedEx, "Database seeding skipped or partially failed.");
+        }
     }
 
     app.UseCors();

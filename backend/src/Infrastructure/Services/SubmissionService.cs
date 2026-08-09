@@ -117,6 +117,28 @@ public class SubmissionService : ISubmissionService
         };
     }
 
+    public async Task<PagedResponse<SubmissionResponse>> GetTeacherSubmissionsAsync(
+        Guid teacherId, SubmissionListFilter filter)
+    {
+        var query = FullQuery().Where(s => s.Assignment.TeacherId == teacherId);
+        query = ApplyFilters(query, filter);
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(s => s.SubmittedAt)
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .ToListAsync();
+
+        return new PagedResponse<SubmissionResponse>
+        {
+            Items = items.Select(ToResponse).ToList(),
+            Page = filter.Page,
+            PageSize = filter.PageSize,
+            TotalCount = totalCount
+        };
+    }
+
     public async Task<PagedResponse<SubmissionResponse>> GetAssignmentSubmissionsAsync(
         Guid assignmentId, Guid teacherId, SubmissionListFilter filter)
     {

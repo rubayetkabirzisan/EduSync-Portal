@@ -11,6 +11,7 @@ public interface ISubmissionService
     Task<PagedResponse<SubmissionResponse>> GetStudentSubmissionsAsync(Guid studentId, SubmissionListFilter filter);
 
     // Teacher operations
+    Task<PagedResponse<SubmissionResponse>> GetTeacherSubmissionsAsync(Guid teacherId, SubmissionListFilter filter);
     Task<PagedResponse<SubmissionResponse>> GetAssignmentSubmissionsAsync(Guid assignmentId, Guid teacherId, SubmissionListFilter filter);
     Task<SubmissionResponse?> GradeAsync(Guid id, Guid teacherId, GradeSubmissionRequest request);
     Task<SubmissionResponse?> ChangeStatusAsync(Guid id, Guid teacherId, ChangeSubmissionStatusRequest request);

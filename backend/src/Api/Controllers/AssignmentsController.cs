@@ -15,6 +15,7 @@ public class AssignmentsController : ControllerBase
 {
     private readonly IAssignmentService _assignmentService;
     private readonly ISubmissionService _submissionService;
+    private readonly ITeachingAssignmentService _teachingAssignmentService;
     private readonly IValidator<CreateAssignmentRequest> _createValidator;
     private readonly IValidator<UpdateAssignmentRequest> _updateValidator;
     private readonly IValidator<GradeSubmissionRequest> _gradeValidator;
@@ -23,6 +24,7 @@ public class AssignmentsController : ControllerBase
     public AssignmentsController(
         IAssignmentService assignmentService,
         ISubmissionService submissionService,
+        ITeachingAssignmentService teachingAssignmentService,
         IValidator<CreateAssignmentRequest> createValidator,
         IValidator<UpdateAssignmentRequest> updateValidator,
         IValidator<GradeSubmissionRequest> gradeValidator,
@@ -30,10 +32,19 @@ public class AssignmentsController : ControllerBase
     {
         _assignmentService = assignmentService;
         _submissionService = submissionService;
+        _teachingAssignmentService = teachingAssignmentService;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _gradeValidator = gradeValidator;
         _statusValidator = statusValidator;
+    }
+
+    [HttpGet("my-allotments")]
+    public async Task<IActionResult> GetMyAllotments()
+    {
+        var teacherId = User.GetUserId();
+        var result = await _teachingAssignmentService.GetAllAsync(1, 100, teacherId: teacherId);
+        return Ok(result.Items);
     }
 
     [HttpGet]
@@ -92,6 +103,14 @@ public class AssignmentsController : ControllerBase
     }
 
     // ── Submission Management (Teacher side) ───────────────────────
+
+    [HttpGet("submissions")]
+    public async Task<IActionResult> GetAllSubmissions([FromQuery] SubmissionListFilter filter)
+    {
+        var teacherId = User.GetUserId();
+        var result = await _submissionService.GetTeacherSubmissionsAsync(teacherId, filter);
+        return Ok(result);
+    }
 
     [HttpGet("{assignmentId:guid}/submissions")]
     public async Task<IActionResult> GetSubmissions(Guid assignmentId, [FromQuery] SubmissionListFilter filter)

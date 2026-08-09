@@ -100,7 +100,7 @@ public class TeachingAssignmentService : ITeachingAssignmentService
         TeacherId = ta.TeacherId,
         TeacherName = ta.Teacher.Name,
         ClassId = ta.ClassId,
-        ClassName = ta.Class.Name,
+        ClassName = $"{ta.Class.Name} - {ta.Class.Section}",
         SubjectId = ta.SubjectId,
         SubjectName = ta.Subject.Name,
         CreatedAt = ta.CreatedAt

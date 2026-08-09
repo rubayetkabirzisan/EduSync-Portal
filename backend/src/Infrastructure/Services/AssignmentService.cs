@@ -190,7 +190,7 @@ public class AssignmentService : IAssignmentService
         Status = a.Status.ToString(),
         AllowResubmission = a.AllowResubmission,
         ClassId = a.ClassId,
-        ClassName = a.Class.Name,
+        ClassName = $"{a.Class.Name} - {a.Class.Section}",
         SubjectId = a.SubjectId,
         SubjectName = a.Subject.Name,
         TeacherId = a.TeacherId,

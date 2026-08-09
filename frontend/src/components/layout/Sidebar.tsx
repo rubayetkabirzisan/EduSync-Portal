@@ -125,6 +125,7 @@ export function Sidebar() {
               {user.role}
             </span>
             <button
+              id="sidebar-logout-btn"
               onClick={logout}
               className="flex items-center space-x-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:text-rose-300 dark:hover:bg-rose-950/40 px-2 py-1 rounded-md transition-colors cursor-pointer"
             >

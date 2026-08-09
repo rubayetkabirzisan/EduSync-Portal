@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using AssignmentSystem.Application.DTOs.Common;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AssignmentSystem.Api.Middleware;
 
@@ -29,12 +29,12 @@ public class GlobalExceptionMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        var (statusCode, message) = exception switch
+        var statusCode = exception switch
         {
-            UnauthorizedAccessException => (HttpStatusCode.Forbidden, exception.Message),
-            InvalidOperationException => (HttpStatusCode.BadRequest, exception.Message),
-            KeyNotFoundException => (HttpStatusCode.NotFound, exception.Message),
-            _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.")
+            UnauthorizedAccessException => HttpStatusCode.Forbidden,
+            InvalidOperationException => HttpStatusCode.BadRequest,
+            KeyNotFoundException => HttpStatusCode.NotFound,
+            _ => HttpStatusCode.InternalServerError
         };
 
         if (statusCode == HttpStatusCode.InternalServerError)
@@ -42,19 +42,24 @@ public class GlobalExceptionMiddleware
         else
             _logger.LogWarning("Handled exception ({StatusCode}): {Message}", (int)statusCode, exception.Message);
 
-        context.Response.ContentType = "application/json";
+        context.Response.ContentType = "application/problem+json";
         context.Response.StatusCode = (int)statusCode;
 
-        var response = new ApiErrorResponse
+        var problemDetails = new ProblemDetails
         {
-            Message = message,
-            StatusCode = (int)statusCode,
-            Detail = context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment()
-                ? exception.StackTrace
-                : null
+            Status = (int)statusCode,
+            Title = exception.GetType().Name,
+            Detail = exception.Message,
+            Instance = context.Request.Path
         };
 
-        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
+        if (context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment())
+        {
+            problemDetails.Extensions["traceId"] = context.TraceIdentifier;
+            problemDetails.Extensions["stackTrace"] = exception.StackTrace;
+        }
+
+        var json = JsonSerializer.Serialize(problemDetails, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });

@@ -10,7 +10,7 @@ export interface Column<T> {
 export interface TableProps<T> {
   columns: Column<T>[];
   data: T[];
-  keyExtractor: (item: T) => string;
+  keyExtractor?: (item: T) => string;
   isLoading?: boolean;
   emptyMessage?: string;
   pagination?: {
@@ -25,7 +25,7 @@ export interface TableProps<T> {
 export function Table<T>({
   columns,
   data,
-  keyExtractor,
+  keyExtractor = (item: any) => item.id || item.Id || Math.random().toString(),
   isLoading = false,
   emptyMessage = "No records found.",
   pagination,
@@ -63,9 +63,9 @@ export function Table<T>({
                 </td>
               </tr>
             ) : (
-              data.map((item) => (
+              data.map((item, index) => (
                 <tr
-                  key={keyExtractor(item)}
+                  key={keyExtractor(item) || index}
                   className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                 >
                   {columns.map((col, cIdx) => (
@@ -123,5 +123,59 @@ export function Table<T>({
         </div>
       )}
     </div>
+  );
+}
+
+export interface DataTableProps<T> {
+  columns: Column<T>[];
+  data: T[];
+  loading?: boolean;
+  page?: number;
+  pageSize?: number;
+  totalCount?: number;
+  onPageChange?: (page: number) => void;
+  emptyState?: ReactNode;
+  keyExtractor?: (item: T) => string;
+}
+
+export function DataTable<T>({
+  columns,
+  data,
+  loading = false,
+  page = 1,
+  pageSize = 10,
+  totalCount = 0,
+  onPageChange,
+  emptyState,
+  keyExtractor = (item: any) => item.id || item.Id || Math.random().toString(),
+}: DataTableProps<T>) {
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+  if (!loading && data.length === 0 && emptyState) {
+    return (
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
+        {emptyState}
+      </div>
+    );
+  }
+
+  return (
+    <Table
+      columns={columns}
+      data={data}
+      isLoading={loading}
+      keyExtractor={keyExtractor}
+      pagination={
+        onPageChange
+          ? {
+              page,
+              pageSize,
+              totalCount,
+              totalPages,
+              onPageChange,
+            }
+          : undefined
+      }
+    />
   );
 }

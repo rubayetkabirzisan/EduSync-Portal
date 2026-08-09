@@ -13,6 +13,7 @@ export interface Toast {
 
 interface ToastContextType {
   toast: (message: string, type?: ToastType) => void;
+  showToast: (message: string, type?: ToastType) => void;
   success: (message: string) => void;
   error: (message: string) => void;
   info: (message: string) => void;
@@ -40,6 +41,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 
   const toast = useCallback((msg: string, type: ToastType = "info") => addToast(msg, type), [addToast]);
+  const showToast = useCallback((msg: string, type: ToastType = "info") => addToast(msg, type), [addToast]);
   const success = useCallback((msg: string) => addToast(msg, "success"), [addToast]);
   const error = useCallback((msg: string) => addToast(msg, "error"), [addToast]);
   const info = useCallback((msg: string) => addToast(msg, "info"), [addToast]);
@@ -60,7 +62,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ToastContext.Provider value={{ toast, success, error, info, warning }}>
+    <ToastContext.Provider value={{ toast, showToast, success, error, info, warning }}>
       {children}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 max-w-sm w-full pointer-events-none">
         {toasts.map((t) => (

@@ -19,6 +19,11 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
+    // Load .env file for Supabase connection string BEFORE builder is created
+    DotNetEnv.Env.Load("../../.env");
+    DotNetEnv.Env.Load("../.env");
+    DotNetEnv.Env.Load();
+
     var builder = WebApplication.CreateBuilder(args);
 
     // ── Serilog ────────────────────────────────────────────────────
@@ -72,7 +77,7 @@ try
         options.AddDefaultPolicy(policy =>
         {
             var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                ?? new[] { "http://localhost:3000" };
+                ?? new[] { "http://localhost:3000", "http://127.0.0.1:3000" };
             policy.WithOrigins(origins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
@@ -80,9 +85,11 @@ try
         });
     });
 
-    // ── Controllers + Swagger ──────────────────────────────────────
+    // ── Controllers + Swagger + API Standards ──────────────────────
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddProblemDetails();
+    builder.Services.AddHealthChecks();
     builder.Services.AddSwaggerGen(options =>
     {
         options.SwaggerDoc("v1", new OpenApiInfo
@@ -158,6 +165,7 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
+    app.MapHealthChecks("/health");
 
     app.Run();
 }

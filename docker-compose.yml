@@ -41,6 +41,33 @@ services:
     volumes:
       - redis_data:/data
 
+  api:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    container_name: assignment-system-api
+    restart: unless-stopped
+    ports:
+      - "5080:5080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=assignment_system;Username=postgres;Password=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    container_name: assignment-system-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:5080/api
+    depends_on:
+      - api
+
 volumes:
   postgres_data:
   mongo_data:

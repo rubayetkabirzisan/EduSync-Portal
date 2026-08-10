@@ -1,0 +1,42 @@
+# Version control
+.git
+.github
+.gitignore
+
+# Visual Studio / .NET
+.vs/
+.vscode/
+bin/
+obj/
+*.user
+*.suo
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Next.js
+.next/
+out/
+
+# Playwright
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+tests/e2e/blob-report/
+tests/e2e/playwright/.cache/
+
+# Environments (Do not copy secrets into containers!)
+.env
+.env.local
+backend/.env
+frontend/.env.local
+appsettings.Development.json
+appsettings.Local.json
+
+# Markdown / Docs
+README.md
+QA_Strategy.md
+AGENTS.md
+CLAUDE.md
+*.md

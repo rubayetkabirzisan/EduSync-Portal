@@ -12,10 +12,10 @@ out/
 frontend/.env.local
 
 # --- Playwright ---
-e2e/test-results/
-e2e/playwright-report/
-e2e/blob-report/
-e2e/playwright/.cache/
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+tests/e2e/blob-report/
+tests/e2e/playwright/.cache/
 
 # --- General ---
 .env

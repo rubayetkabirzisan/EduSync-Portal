@@ -80,3 +80,18 @@ During both manual and automated QA passes, several significant edge cases and e
 **Symptom:** During the deployment phase to a live Supabase cloud instance, testing revealed that placing the connection string in `appsettings.json` exposed raw passwords to the Git history, posing a severe security risk.
 **Root Cause:** .NET Core `appsettings.json` does not natively support physical `.env` file interpolation in local development without explicit configuration mapping, leading developers to accidentally commit secrets.
 **Resolution:** Installed the `DotNetEnv` package and restructured the `Program.cs` file to explicitly execute `DotNetEnv.Env.Load()` **before** `WebApplication.CreateBuilder()`. This intercepts the environment pipeline, allowing us to safely store the Supabase Transaction Pooler URI securely in a git-ignored `.env` file while maintaining a pristine `appsettings.Development.json` for local fallback testing.
+
+### Issue 11: Vercel Serverless Architecture Clashing with Next.js Standalone
+**Symptom:** The Vercel frontend deployment failed with an `ENOENT: no such file or directory` error referencing `.next-server.js.nft.json`.
+**Root Cause:** To optimize our Docker CI/CD multi-stage build, we had configured `output: "standalone"` in `next.config.ts`. However, Vercel's proprietary serverless build engine conflicts with this specific output mode as it uses its own routing and chunking logic.
+**Resolution:** Modified `next.config.ts` to apply the `standalone` output conditionally based on a `process.env.DOCKER_BUILD` variable, ensuring the frontend successfully compiles both in our automated Docker pipeline and on Vercel's native infrastructure.
+
+### Issue 12: Production CORS Rejection Between Cloud Providers
+**Symptom:** After deploying the Next.js frontend to Vercel and the .NET API to Render, login attempts resulted in generic "Invalid Credentials" errors despite passwords being correct.
+**Root Cause:** The `axios` network requests were being silently blocked by the browser. The .NET backend CORS policy was strictly configured to only accept requests from `localhost:3000`. It was rejecting the cross-origin requests originating from the live `https://edu-sync-portal.vercel.app` domain.
+**Resolution:** Added `Cors__AllowedOrigins__0` as a production environment variable in Render, pointing to the Vercel domain. This dynamically expanded the backend's allowed origins whitelist without hardcoding production URLs into the source code.
+
+### Issue 13: Tailwind CSS Variant Merge Conflicts
+**Symptom:** Header action buttons ("View Class Tasks", "Create Task") were entirely invisible until the user hovered over them.
+**Root Cause:** The UI leveraged a custom `<Button variant="secondary">` component, which applied base `bg-slate-700 text-white` classes. Simultaneously, we passed `className="bg-white text-emerald-700"` overrides. Without `tailwind-merge` installed, the browser unpredictably merged these conflicting background and text colors, resulting in white text on a white background.
+**Resolution:** Decoupled those specific buttons from the generic `<Button>` wrapper and converted them to standard HTML `<button>` elements with explicit Tailwind utility classes. This provided absolute styling predictability and fully restored the intended hover dynamics.

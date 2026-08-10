@@ -2,6 +2,12 @@
 
 A role-based school/college application built as a recruitment project, evaluating requirements understanding, system design, API development, frontend implementation, and testing.
 
+## 🌐 Live Demo
+The application is fully containerized, CI/CD automated, and deployed to the cloud!
+* **Live Site (Frontend):** [https://edu-sync-portal.vercel.app](https://edu-sync-portal.vercel.app)
+* **API Backend:** Render.com
+* **Database:** Supabase PostgreSQL
+
 ## 🚀 Project Overview
 EduSync Portal is a modern, robust, and highly secure web application that allows teachers to create and grade assignments, students to submit their work, and administrators to oversee the entire educational ecosystem. 
 

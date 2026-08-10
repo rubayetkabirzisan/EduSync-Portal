@@ -87,13 +87,12 @@ export default function TeacherDashboard() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/teacher/assignments">
-              <Button
-                variant="secondary"
+              <button
                 id="quick-create-assignment-btn"
-                className="bg-white text-indigo-700 hover:bg-sky-50 shadow-md font-semibold cursor-pointer"
+                className="inline-flex items-center justify-center font-semibold rounded-lg px-4 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 bg-white text-indigo-700 hover:bg-sky-50 shadow-md cursor-pointer focus:ring-indigo-500"
               >
                 <Plus className="w-4 h-4 mr-1.5" /> Create Task
-              </Button>
+              </button>
             </Link>
             <Link href="/teacher/submissions">
               <Button

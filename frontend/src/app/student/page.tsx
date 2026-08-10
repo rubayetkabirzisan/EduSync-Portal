@@ -101,13 +101,12 @@ export default function StudentDashboard() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/student/assignments">
-              <Button
-                variant="secondary"
+              <button
                 id="view-tasks-btn"
-                className="bg-white text-emerald-700 hover:bg-emerald-50 shadow-md font-semibold cursor-pointer"
+                className="inline-flex items-center justify-center font-semibold rounded-lg px-4 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 bg-white text-emerald-700 hover:bg-emerald-50 shadow-md cursor-pointer focus:ring-emerald-500"
               >
                 <FileSpreadsheet className="w-4 h-4 mr-1.5" /> View Class Tasks
-              </Button>
+              </button>
             </Link>
             <Link href="/student/submissions">
               <Button

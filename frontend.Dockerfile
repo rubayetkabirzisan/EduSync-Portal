@@ -11,6 +11,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ ./
 # Environment variables must be present at build time
 ENV NEXT_PUBLIC_API_BASE_URL=http://localhost:5080/api
+ENV DOCKER_BUILD=1
 RUN npm run build
 
 # Stage 3: Runner

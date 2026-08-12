@@ -67,9 +67,10 @@ public class NotificationService : INotificationService
         List<(string Email, string Name)> students,
         string assignmentTitle, string className, DateTime deadline)
     {
-        try
+        int successCount = 0;
+        foreach (var (email, name) in students)
         {
-            foreach (var (email, name) in students)
+            try
             {
                 var message = new EmailMessage
                 {
@@ -97,14 +98,15 @@ public class NotificationService : INotificationService
                 };
 
                 await _resend.EmailSendAsync(message);
+                successCount++;
             }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send published notification to '{Email}' for '{Title}'", email, assignmentTitle);
+            }
+        }
 
-            _logger.LogInformation("Published notification sent to {Count} students for '{Title}'",
-                students.Count, assignmentTitle);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to send published notifications for '{Title}'", assignmentTitle);
-        }
+        _logger.LogInformation("Published notification successfully sent to {SuccessCount}/{TotalCount} students for '{Title}'",
+            successCount, students.Count, assignmentTitle);
     }
 }

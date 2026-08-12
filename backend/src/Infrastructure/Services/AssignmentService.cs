@@ -47,6 +47,26 @@ public class AssignmentService : IAssignmentService
         _db.Assignments.Add(entity);
         await _db.SaveChangesAsync();
 
+        // If published immediately, send the notification
+        if (request.PublishImmediately)
+        {
+            var classStudents = await _db.Users
+                .Where(u => u.ClassId == entity.ClassId && u.Role == UserRole.Student)
+                .Select(u => new { u.Email, u.Name })
+                .ToListAsync();
+
+            if (classStudents.Any())
+            {
+                var recipients = classStudents.Select(s => (s.Email, s.Name)).ToList();
+                var cls = await _db.Classes.FindAsync(entity.ClassId);
+                _ = _notifications.SendAssignmentPublishedNotificationAsync(
+                    recipients,
+                    entity.Title,
+                    cls is not null ? $"{cls.Name} - {cls.Section}" : "Your Class",
+                    entity.Deadline);
+            }
+        }
+
         return await MapToResponse(entity.Id);
     }
 

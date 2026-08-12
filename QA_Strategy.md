@@ -105,3 +105,8 @@ During both manual and automated QA passes, several significant edge cases and e
 **Symptom:** A student could fetch any assignment by GUID via `GET /api/student/assignments/{id}`, including draft (unpublished) assignments and assignments belonging to other classes. The list endpoint correctly filtered by class and published status, but the detail endpoint did not.
 **Root Cause:** The `GetAssignment` action in `StudentController` called `_assignmentService.GetByIdAsync(id)` directly without any authorization check, returning the full assignment entity regardless of its status or class.
 **Resolution:** Added a published-status guard that returns `404 Not Found` for any assignment that is not in `Published` status. This ensures students cannot discover or read draft assignments, even if they somehow obtain a valid assignment GUID.
+
+### Issue 16: Sandbox Restrictions in Bulk Email Loops
+**Symptom:** When publishing an assignment to a class, the "New Assignment" email notification was failing to reach valid student emails.
+**Root Cause:** The `SendAssignmentPublishedNotificationAsync` method looped over all students in the class. Because dummy emails (e.g. `student2@school.test`) were not verified in the Resend free-tier sandbox, the Resend API threw an exception on the first unverified email. This exception was caught outside the loop, aborting the process for all subsequent valid emails.
+**Resolution:** Moved the `try-catch` block inside the loop so that a failure on a single unverified email is caught individually, allowing the system to continue processing the rest of the valid emails successfully.

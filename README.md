@@ -18,6 +18,7 @@ It implements strict Role-Based Access Control (RBAC), preventing unauthorized a
 *   **Assignment Lifecycle:** Teachers can draft, publish, and grade assignments with feedback. Students can submit and update their work before deadlines.
 *   **Automated Validation:** Business logic strictly enforced (e.g., impossible to grade beyond max marks, impossible to submit to a draft assignment).
 *   **Security Hardening:** Status-change endpoints are whitelisted to prevent workflow bypass. Student endpoints enforce class membership and published-status checks to prevent IDOR attacks.
+*   **Email Notifications:** Integrates with Resend API to automatically alert students when new assignments are published or their submissions are graded.
 *   **Premium UI/UX:** Responsive, fully interactive glassmorphism design powered by Tailwind CSS.
 
 ## 🛠️ Technology Stack
@@ -25,6 +26,7 @@ It implements strict Role-Based Access Control (RBAC), preventing unauthorized a
 *   **Backend:** ASP.NET Core Web API (.NET 10), C#, Entity Framework Core.
 *   **Database:** PostgreSQL.
 *   **Authentication:** JWT (JSON Web Tokens).
+*   **Email:** Resend.com API (for automated notifications).
 *   **Testing:** xUnit (Backend Unit Tests), Playwright (E2E UI Tests).
 
 ## 🗂️ Project Structure
@@ -45,6 +47,10 @@ The backend utilizes Entity Framework Core and is configured to connect to Postg
 2. Add your database connection string using the following exact variable name:
 ```env
 ConnectionStrings__DefaultConnection="Host=aws-0-eu-central-1.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.[project_id];Password=[your_password]"
+```
+3. If testing email notifications, add your Resend API Key:
+```env
+Resend__ApiKey=re_your_api_key_here
 ```
 *(Note: If you do not provide a `.env` file, the API will automatically fall back to the local development database specified in `appsettings.Development.json`.)*
 
@@ -122,4 +128,3 @@ npx playwright test --workers=1
 
 ### Known Limitations
 *   **No File Uploads:** For simplicity, the assignment submission process currently accepts rich-text answers rather than physical PDF/Docx file uploads.
-*   **No Push Notifications:** The system does not currently integrate with an external SMTP server for email alerts when an assignment is graded, relying instead on the student logging into their dashboard.

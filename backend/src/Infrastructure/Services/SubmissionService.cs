@@ -208,7 +208,16 @@ public class SubmissionService : ISubmissionService
         if (submission.Assignment.TeacherId != teacherId)
             throw new UnauthorizedAccessException("You can only change status for submissions to your own assignments.");
 
-        submission.Status = Enum.Parse<SubmissionStatus>(request.Status);
+        if (!Enum.TryParse<SubmissionStatus>(request.Status, out var newStatus))
+            throw new InvalidOperationException($"Invalid status value: '{request.Status}'.");
+
+        // Only allow non-grading transitions — grading must go through the Grade endpoint
+        var allowed = new[] { SubmissionStatus.UnderReview, SubmissionStatus.NeedsRevision };
+        if (!allowed.Contains(newStatus))
+            throw new InvalidOperationException(
+                "Status can only be changed to 'UnderReview' or 'NeedsRevision'. Use the grade endpoint to mark as Graded.");
+
+        submission.Status = newStatus;
         submission.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();

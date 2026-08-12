@@ -44,7 +44,13 @@ public class StudentController : ControllerBase
     public async Task<IActionResult> GetAssignment(Guid id)
     {
         var entity = await _assignmentService.GetByIdAsync(id);
-        return entity is null ? NotFound() : Ok(entity);
+        if (entity is null) return NotFound();
+
+        // Students can only view published assignments for their own class
+        if (entity.Status != "Published")
+            return NotFound();
+
+        return Ok(entity);
     }
 
     // ── Submissions ────────────────────────────────────────────────

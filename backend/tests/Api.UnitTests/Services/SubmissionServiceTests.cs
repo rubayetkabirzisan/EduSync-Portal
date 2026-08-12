@@ -71,4 +71,124 @@ public class SubmissionServiceTests
             service.GradeAsync(submissionId, teacherId, request));
         Assert.Contains("cannot exceed the maximum", ex.Message);
     }
+
+    [Fact]
+    public async Task CreateAsync_WhenStudentNotInClass_ThrowsUnauthorizedAccessException()
+    {
+        // Arrange
+        var db = GetInMemoryDbContext();
+        var studentId = Guid.NewGuid();
+        var assignmentId = Guid.NewGuid();
+
+        db.Users.Add(new User { Id = studentId, Role = UserRole.Student, ClassId = Guid.NewGuid() });
+        db.Assignments.Add(new Assignment
+        {
+            Id = assignmentId,
+            ClassId = Guid.NewGuid(), // Different class than student
+            Status = AssignmentStatus.Published
+        });
+        await db.SaveChangesAsync();
+
+        var service = new SubmissionService(db);
+        var request = new CreateSubmissionRequest { AssignmentId = assignmentId, Content = "Test" };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.CreateAsync(studentId, request));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenAlreadyGraded_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var db = GetInMemoryDbContext();
+        var studentId = Guid.NewGuid();
+        var submissionId = Guid.NewGuid();
+
+        var assignment = new Assignment
+        {
+            Id = Guid.NewGuid(),
+            AllowResubmission = true,
+            Deadline = DateTime.UtcNow.AddDays(5)
+        };
+        db.Submissions.Add(new Submission
+        {
+            Id = submissionId,
+            StudentId = studentId,
+            Assignment = assignment,
+            Status = SubmissionStatus.Graded
+        });
+        await db.SaveChangesAsync();
+
+        var service = new SubmissionService(db);
+        var request = new UpdateSubmissionRequest { Content = "Updated answer" };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.UpdateAsync(submissionId, studentId, request));
+        Assert.Contains("already been graded", ex.Message);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenDeadlinePassed_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var db = GetInMemoryDbContext();
+        var studentId = Guid.NewGuid();
+        var submissionId = Guid.NewGuid();
+
+        var assignment = new Assignment
+        {
+            Id = Guid.NewGuid(),
+            AllowResubmission = true,
+            Deadline = DateTime.UtcNow.AddDays(-1) // Deadline already passed
+        };
+        db.Submissions.Add(new Submission
+        {
+            Id = submissionId,
+            StudentId = studentId,
+            Assignment = assignment,
+            Status = SubmissionStatus.Submitted
+        });
+        await db.SaveChangesAsync();
+
+        var service = new SubmissionService(db);
+        var request = new UpdateSubmissionRequest { Content = "Too late answer" };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.UpdateAsync(submissionId, studentId, request));
+        Assert.Contains("deadline has passed", ex.Message);
+    }
+
+    [Fact]
+    public async Task ChangeStatusAsync_WhenStatusIsGraded_ThrowsInvalidOperationException()
+    {
+        // Arrange — verifies the Enum.Parse bypass security fix
+        var db = GetInMemoryDbContext();
+        var teacherId = Guid.NewGuid();
+        var submissionId = Guid.NewGuid();
+
+        var assignment = new Assignment
+        {
+            Id = Guid.NewGuid(),
+            TeacherId = teacherId,
+            MaxMarks = 100
+        };
+        db.Submissions.Add(new Submission
+        {
+            Id = submissionId,
+            Assignment = assignment,
+            Status = SubmissionStatus.Submitted
+        });
+        await db.SaveChangesAsync();
+
+        var service = new SubmissionService(db);
+        var request = new ChangeSubmissionStatusRequest { Status = "Graded" };
+
+        // Act & Assert — "Graded" is not allowed via ChangeStatus; must use Grade endpoint
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ChangeStatusAsync(submissionId, teacherId, request));
+        Assert.Contains("UnderReview", ex.Message);
+    }
 }

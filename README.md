@@ -17,6 +17,7 @@ It implements strict Role-Based Access Control (RBAC), preventing unauthorized a
 *   **Role-Based Dashboards:** Dedicated, secure portals for Admins, Teachers, and Students.
 *   **Assignment Lifecycle:** Teachers can draft, publish, and grade assignments with feedback. Students can submit and update their work before deadlines.
 *   **Automated Validation:** Business logic strictly enforced (e.g., impossible to grade beyond max marks, impossible to submit to a draft assignment).
+*   **Security Hardening:** Status-change endpoints are whitelisted to prevent workflow bypass. Student endpoints enforce class membership and published-status checks to prevent IDOR attacks.
 *   **Premium UI/UX:** Responsive, fully interactive glassmorphism design powered by Tailwind CSS.
 
 ## 🛠️ Technology Stack
@@ -91,7 +92,15 @@ The database automatically seeds these accounts on startup. You can also use the
 ## 🧪 Testing
 
 ### Backend Unit Tests (xUnit)
-Unit tests cover the core business rules and authorization constraints (e.g., preventing a teacher from awarding 105 points on a 100-point assignment).
+8 unit tests cover core business rules, authorization constraints, and security edge cases:
+*   Authorization denial when a teacher is not assigned to a class/subject.
+*   Draft → Published lifecycle transition verification.
+*   Marks boundary enforcement (cannot exceed max marks).
+*   Student cross-class submission rejection.
+*   Graded submission immutability (cannot update after grading).
+*   Deadline enforcement on submission updates.
+*   Status-change endpoint whitelist (blocks `Graded` bypass via `ChangeStatus`).
+
 ```bash
 cd backend
 dotnet test

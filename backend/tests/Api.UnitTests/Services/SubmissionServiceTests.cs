@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using AssignmentSystem.Application.DTOs.Submissions;
+using AssignmentSystem.Application.Interfaces;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
 using AssignmentSystem.Infrastructure.Data;
@@ -33,7 +34,7 @@ public class SubmissionServiceTests
         db.Assignments.Add(new Assignment { Id = assignmentId, ClassId = classId, Status = AssignmentStatus.Draft });
         await db.SaveChangesAsync();
 
-        var service = new SubmissionService(db);
+        var service = new SubmissionService(db, new NoOpNotificationService());
         var request = new CreateSubmissionRequest { AssignmentId = assignmentId, Content = "Test" };
 
         // Act & Assert
@@ -63,7 +64,7 @@ public class SubmissionServiceTests
         });
         await db.SaveChangesAsync();
 
-        var service = new SubmissionService(db);
+        var service = new SubmissionService(db, new NoOpNotificationService());
         var request = new GradeSubmissionRequest { Marks = 105, Feedback = "Good" };
 
         // Act & Assert
@@ -89,7 +90,7 @@ public class SubmissionServiceTests
         });
         await db.SaveChangesAsync();
 
-        var service = new SubmissionService(db);
+        var service = new SubmissionService(db, new NoOpNotificationService());
         var request = new CreateSubmissionRequest { AssignmentId = assignmentId, Content = "Test" };
 
         // Act & Assert
@@ -120,7 +121,7 @@ public class SubmissionServiceTests
         });
         await db.SaveChangesAsync();
 
-        var service = new SubmissionService(db);
+        var service = new SubmissionService(db, new NoOpNotificationService());
         var request = new UpdateSubmissionRequest { Content = "Updated answer" };
 
         // Act & Assert
@@ -152,7 +153,7 @@ public class SubmissionServiceTests
         });
         await db.SaveChangesAsync();
 
-        var service = new SubmissionService(db);
+        var service = new SubmissionService(db, new NoOpNotificationService());
         var request = new UpdateSubmissionRequest { Content = "Too late answer" };
 
         // Act & Assert
@@ -183,12 +184,21 @@ public class SubmissionServiceTests
         });
         await db.SaveChangesAsync();
 
-        var service = new SubmissionService(db);
+        var service = new SubmissionService(db, new NoOpNotificationService());
         var request = new ChangeSubmissionStatusRequest { Status = "Graded" };
 
         // Act & Assert — "Graded" is not allowed via ChangeStatus; must use Grade endpoint
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.ChangeStatusAsync(submissionId, teacherId, request));
         Assert.Contains("UnderReview", ex.Message);
+    }
+
+    private class NoOpNotificationService : INotificationService
+    {
+        public Task SendGradedNotificationAsync(string studentEmail, string studentName,
+            string assignmentTitle, int marks, int maxMarks, string? feedback) => Task.CompletedTask;
+
+        public Task SendAssignmentPublishedNotificationAsync(System.Collections.Generic.List<(string Email, string Name)> students,
+            string assignmentTitle, string className, DateTime deadline) => Task.CompletedTask;
     }
 }

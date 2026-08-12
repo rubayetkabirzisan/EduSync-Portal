@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using AssignmentSystem.Application.DTOs.Assignments;
+using AssignmentSystem.Application.Interfaces;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
 using AssignmentSystem.Infrastructure.Data;
@@ -25,7 +26,7 @@ public class AssignmentServiceTests
     {
         // Arrange
         var db = GetInMemoryDbContext();
-        var service = new AssignmentService(db);
+        var service = new AssignmentService(db, new NoOpNotificationService());
 
         var request = new CreateAssignmentRequest
         {
@@ -61,7 +62,7 @@ public class AssignmentServiceTests
         db.Assignments.Add(assignment);
         await db.SaveChangesAsync();
 
-        var service = new AssignmentService(db);
+        var service = new AssignmentService(db, new NoOpNotificationService());
 
         // Act
         var result = await service.PublishAsync(assignment.Id, teacherId);
@@ -69,5 +70,14 @@ public class AssignmentServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("Published", result.Status);
+    }
+
+    private class NoOpNotificationService : INotificationService
+    {
+        public Task SendGradedNotificationAsync(string studentEmail, string studentName,
+            string assignmentTitle, int marks, int maxMarks, string? feedback) => Task.CompletedTask;
+
+        public Task SendAssignmentPublishedNotificationAsync(System.Collections.Generic.List<(string Email, string Name)> students,
+            string assignmentTitle, string className, DateTime deadline) => Task.CompletedTask;
     }
 }

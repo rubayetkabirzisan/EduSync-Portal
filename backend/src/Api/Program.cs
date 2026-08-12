@@ -44,6 +44,16 @@ try
     builder.Services.AddScoped<IAssignmentService, AssignmentService>();
     builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 
+    // ── Notifications ───────────────────────────────────────────────
+    builder.Services.AddOptions();
+    builder.Services.AddHttpClient<Resend.ResendClient>();
+    builder.Services.Configure<Resend.ResendClientOptions>(o =>
+    {
+        o.ApiToken = builder.Configuration["Resend:ApiKey"] ?? "";
+    });
+    builder.Services.AddTransient<Resend.IResend, Resend.ResendClient>();
+    builder.Services.AddScoped<INotificationService, NotificationService>();
+
     // ── FluentValidation ───────────────────────────────────────────
     builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 

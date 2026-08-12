@@ -11,8 +11,13 @@ namespace AssignmentSystem.Infrastructure.Services;
 public class SubmissionService : ISubmissionService
 {
     private readonly AppDbContext _db;
+    private readonly INotificationService _notifications;
 
-    public SubmissionService(AppDbContext db) => _db = db;
+    public SubmissionService(AppDbContext db, INotificationService notifications)
+    {
+        _db = db;
+        _notifications = notifications;
+    }
 
     public async Task<SubmissionResponse> CreateAsync(Guid studentId, CreateSubmissionRequest request)
     {
@@ -193,6 +198,19 @@ public class SubmissionService : ISubmissionService
         submission.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+
+        // Send email notification to student
+        var student = await _db.Users.FindAsync(submission.StudentId);
+        if (student is not null)
+        {
+            _ = _notifications.SendGradedNotificationAsync(
+                student.Email,
+                student.Name,
+                submission.Assignment.Title,
+                request.Marks,
+                submission.Assignment.MaxMarks,
+                request.Feedback);
+        }
 
         return await MapToResponse(submission.Id);
     }

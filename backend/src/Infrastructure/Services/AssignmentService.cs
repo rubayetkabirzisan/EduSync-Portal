@@ -11,8 +11,13 @@ namespace AssignmentSystem.Infrastructure.Services;
 public class AssignmentService : IAssignmentService
 {
     private readonly AppDbContext _db;
+    private readonly INotificationService _notifications;
 
-    public AssignmentService(AppDbContext db) => _db = db;
+    public AssignmentService(AppDbContext db, INotificationService notifications)
+    {
+        _db = db;
+        _notifications = notifications;
+    }
 
     public async Task<AssignmentResponse> CreateAsync(Guid teacherId, CreateAssignmentRequest request)
     {
@@ -98,6 +103,23 @@ public class AssignmentService : IAssignmentService
         entity.Status = AssignmentStatus.Published;
         entity.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        // Notify all students in the class
+        var classStudents = await _db.Users
+            .Where(u => u.ClassId == entity.ClassId && u.Role == UserRole.Student)
+            .Select(u => new { u.Email, u.Name })
+            .ToListAsync();
+
+        if (classStudents.Any())
+        {
+            var recipients = classStudents.Select(s => (s.Email, s.Name)).ToList();
+            var cls = await _db.Classes.FindAsync(entity.ClassId);
+            _ = _notifications.SendAssignmentPublishedNotificationAsync(
+                recipients,
+                entity.Title,
+                cls is not null ? $"{cls.Name} - {cls.Section}" : "Your Class",
+                entity.Deadline);
+        }
 
         return await MapToResponse(entity.Id);
     }

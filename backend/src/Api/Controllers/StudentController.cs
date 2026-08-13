@@ -15,17 +15,20 @@ public class StudentController : ControllerBase
 {
     private readonly IAssignmentService _assignmentService;
     private readonly ISubmissionService _submissionService;
+    private readonly IUserService _userService;
     private readonly IValidator<CreateSubmissionRequest> _createValidator;
     private readonly IValidator<UpdateSubmissionRequest> _updateValidator;
 
     public StudentController(
         IAssignmentService assignmentService,
         ISubmissionService submissionService,
+        IUserService userService,
         IValidator<CreateSubmissionRequest> createValidator,
         IValidator<UpdateSubmissionRequest> updateValidator)
     {
         _assignmentService = assignmentService;
         _submissionService = submissionService;
+        _userService = userService;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
     }
@@ -43,11 +46,14 @@ public class StudentController : ControllerBase
     [HttpGet("assignments/{id:guid}")]
     public async Task<IActionResult> GetAssignment(Guid id)
     {
+        var studentId = User.GetUserId();
+        var student = await _userService.GetByIdAsync(studentId);
+
         var entity = await _assignmentService.GetByIdAsync(id);
         if (entity is null) return NotFound();
 
         // Students can only view published assignments for their own class
-        if (entity.Status != "Published")
+        if (entity.Status != "Published" || entity.ClassId != student?.ClassId)
             return NotFound();
 
         return Ok(entity);

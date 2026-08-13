@@ -27,11 +27,14 @@ public class UserService : IUserService
                 throw new InvalidOperationException("The specified class does not exist.");
         }
 
+        if (!Enum.TryParse<UserRole>(request.Role, out var parsedRole))
+            throw new InvalidOperationException($"Invalid role: '{request.Role}'.");
+
         var user = new User
         {
             Name = request.Name,
             Email = request.Email,
-            Role = Enum.Parse<UserRole>(request.Role),
+            Role = parsedRole,
             ClassId = request.Role == "Student" ? request.ClassId : null
         };
         user.PasswordHash = _hasher.HashPassword(user, request.Password);

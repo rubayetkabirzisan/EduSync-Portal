@@ -40,7 +40,15 @@ It implements strict Role-Based Access Control (RBAC), preventing unauthorized a
 
 ## ⚙️ Setup & Run Instructions
 
-### 1. Database Setup (Supabase / PostgreSQL)
+### 🚀 Quick Start (Docker - Recommended)
+If you have Docker Desktop installed, you can spin up the entire stack (Database, API, and Frontend) with a single command.
+1. Open a terminal in the root directory.
+2. Run: `docker compose up -d`
+3. Access the web app at **http://127.0.0.1:3000** and the API Swagger docs at **http://127.0.0.1:5080/swagger**.
+
+---
+
+### 1. Manual Database Setup (Supabase / PostgreSQL)
 The backend utilizes Entity Framework Core and is configured to connect to PostgreSQL. It securely loads credentials using the `DotNetEnv` package.
 
 1. Create a new file named `.env` in the `backend/` directory.

@@ -120,3 +120,8 @@ During both manual and automated QA passes, several significant edge cases and e
 **Symptom:** While the assignment list for students was correctly filtered, the single assignment detail endpoint (`GET /api/student/assignments/{id}`) allowed a student to view an assignment belonging to a different class, provided the assignment was published and the student knew its GUID.
 **Root Cause:** The `GetAssignment` endpoint validated that the assignment's status was `Published`, but failed to cross-reference the assignment's `ClassId` against the authenticated student's `ClassId`.
 **Resolution:** Injected `IUserService` into the `StudentController` to fetch the authenticated student's profile. The endpoint was updated to return a `404 Not Found` if `entity.ClassId != student.ClassId`, completely closing the IDOR vulnerability.
+
+### Issue 19: Dependency Injection Scope Disposal on Fire-and-Forget Notifications
+**Symptom:** The "Assignment Published" emails were silently failing to send in production, whereas single "Graded" emails sent successfully.
+**Root Cause:** The notification methods were being invoked as fire-and-forget tasks (`_ = _notifications.SendAsync()`). For bulk emails, the HTTP request often finished and ASP.NET Core disposed of the request's Dependency Injection scope (destroying the scoped `IResend` and `ILogger` instances) before the background `foreach` loop finished executing, leading to an `ObjectDisposedException`.
+**Resolution:** Refactored the notification calls in both `AssignmentService` and `SubmissionService` to be properly `await`ed. This ensures the HTTP request context remains alive until all emails have been safely dispatched to the provider.

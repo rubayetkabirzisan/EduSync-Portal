@@ -17,7 +17,7 @@ It implements strict Role-Based Access Control (RBAC), preventing unauthorized a
 *   **Role-Based Dashboards:** Dedicated, secure portals for Admins, Teachers, and Students.
 *   **Assignment Lifecycle:** Teachers can draft, publish, and grade assignments with feedback. Students can submit and update their work before deadlines.
 *   **Automated Validation:** Business logic strictly enforced (e.g., impossible to grade beyond max marks, impossible to submit to a draft assignment).
-*   **Security Hardening:** Passed a comprehensive security audit (resolving 18 QA/Security issues). Status-change endpoints are whitelisted to prevent workflow bypass. Student endpoints enforce class membership and published-status checks to prevent IDOR attacks.
+*   **Security Hardening:** Passed a comprehensive security audit (resolving 19 QA/Security issues). Status-change endpoints are whitelisted to prevent workflow bypass. Student endpoints enforce class membership and published-status checks to prevent IDOR attacks.
 *   **Email Notifications:** Integrates with Resend API to automatically alert students when new assignments are published or their submissions are graded.
 *   **Premium UI/UX:** Responsive, fully interactive glassmorphism design powered by Tailwind CSS.
 

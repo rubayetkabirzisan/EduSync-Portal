@@ -203,7 +203,7 @@ public class SubmissionService : ISubmissionService
         var student = await _db.Users.FindAsync(submission.StudentId);
         if (student is not null)
         {
-            _ = _notifications.SendGradedNotificationAsync(
+            await _notifications.SendGradedNotificationAsync(
                 student.Email,
                 student.Name,
                 submission.Assignment.Title,

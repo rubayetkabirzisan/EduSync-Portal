@@ -59,7 +59,7 @@ public class AssignmentService : IAssignmentService
             {
                 var recipients = classStudents.Select(s => (s.Email, s.Name)).ToList();
                 var cls = await _db.Classes.FindAsync(entity.ClassId);
-                _ = _notifications.SendAssignmentPublishedNotificationAsync(
+                await _notifications.SendAssignmentPublishedNotificationAsync(
                     recipients,
                     entity.Title,
                     cls is not null ? $"{cls.Name} - {cls.Section}" : "Your Class",
@@ -134,7 +134,7 @@ public class AssignmentService : IAssignmentService
         {
             var recipients = classStudents.Select(s => (s.Email, s.Name)).ToList();
             var cls = await _db.Classes.FindAsync(entity.ClassId);
-            _ = _notifications.SendAssignmentPublishedNotificationAsync(
+            await _notifications.SendAssignmentPublishedNotificationAsync(
                 recipients,
                 entity.Title,
                 cls is not null ? $"{cls.Name} - {cls.Section}" : "Your Class",

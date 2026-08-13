@@ -110,3 +110,13 @@ During both manual and automated QA passes, several significant edge cases and e
 **Symptom:** When publishing an assignment to a class, the "New Assignment" email notification was failing to reach valid student emails.
 **Root Cause:** The `SendAssignmentPublishedNotificationAsync` method looped over all students in the class. Because dummy emails (e.g. `student2@school.test`) were not verified in the Resend free-tier sandbox, the Resend API threw an exception on the first unverified email. This exception was caught outside the loop, aborting the process for all subsequent valid emails.
 **Resolution:** Moved the `try-catch` block inside the loop so that a failure on a single unverified email is caught individually, allowing the system to continue processing the rest of the valid emails successfully.
+
+### Issue 17: Unsafe Enum Parsing in UserService
+**Symptom:** During a security audit, it was discovered that a malformed role string provided during user creation could trigger an unhandled 500 Internal Server Error.
+**Root Cause:** The `UserService.CreateAsync` method used `Enum.Parse<UserRole>(request.Role)`. If the provided role string was invalid, it threw an `ArgumentException` that bypassed standard validation logic.
+**Resolution:** Replaced `Enum.Parse` with `Enum.TryParse`. The system now safely catches invalid role values and throws a proper `InvalidOperationException`, resulting in a clean 400 Bad Request response with an accurate error message.
+
+### Issue 18: Incomplete IDOR Protection on Student Assignment Detail
+**Symptom:** While the assignment list for students was correctly filtered, the single assignment detail endpoint (`GET /api/student/assignments/{id}`) allowed a student to view an assignment belonging to a different class, provided the assignment was published and the student knew its GUID.
+**Root Cause:** The `GetAssignment` endpoint validated that the assignment's status was `Published`, but failed to cross-reference the assignment's `ClassId` against the authenticated student's `ClassId`.
+**Resolution:** Injected `IUserService` into the `StudentController` to fetch the authenticated student's profile. The endpoint was updated to return a `404 Not Found` if `entity.ClassId != student.ClassId`, completely closing the IDOR vulnerability.

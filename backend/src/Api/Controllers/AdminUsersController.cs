@@ -8,7 +8,7 @@ namespace AssignmentSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/admin/users")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,Teacher")]
 public class AdminUsersController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -37,6 +37,7 @@ public class AdminUsersController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var user = await _userService.GetByIdAsync(id);
@@ -44,6 +45,7 @@ public class AdminUsersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create(CreateUserRequest request)
     {
         var validation = await _createValidator.ValidateAsync(request);
@@ -55,6 +57,7 @@ public class AdminUsersController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(Guid id, UpdateUserRequest request)
     {
         var validation = await _updateValidator.ValidateAsync(request);
@@ -66,6 +69,7 @@ public class AdminUsersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var deleted = await _userService.DeleteAsync(id);

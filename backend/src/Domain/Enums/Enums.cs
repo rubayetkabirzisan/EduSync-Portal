@@ -21,3 +21,25 @@ public enum SubmissionStatus
     Graded,
     NeedsRevision
 }
+
+public enum NoticeAudience
+{
+    All,
+    Teachers,
+    Students
+}
+
+public enum LeaveStatus
+{
+    Pending,
+    Approved,
+    Rejected
+}
+
+public enum ScholarshipStatus
+{
+    Pending,
+    UnderReview,
+    Approved,
+    Rejected
+}

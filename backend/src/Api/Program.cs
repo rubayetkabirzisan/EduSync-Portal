@@ -1,5 +1,6 @@
 using System.Text;
 using AssignmentSystem.Api.Middleware;
+using AssignmentSystem.Api.Services;
 using AssignmentSystem.Application.DTOs.Auth;
 using AssignmentSystem.Application.Interfaces;
 using AssignmentSystem.Infrastructure.Data;
@@ -32,8 +33,10 @@ try
         .WriteTo.Console());
 
     // ── Database ───────────────────────────────────────────────────
+    var connString = builder.Configuration.GetConnectionString("DefaultConnection");
+    Log.Information("Connecting to database: " + connString?.Split(';').FirstOrDefault());
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+        options.UseNpgsql(connString));
 
     // ── Application Services ───────────────────────────────────────
     builder.Services.AddScoped<IAuthService, AuthService>();
@@ -43,6 +46,22 @@ try
     builder.Services.AddScoped<ITeachingAssignmentService, TeachingAssignmentService>();
     builder.Services.AddScoped<IAssignmentService, AssignmentService>();
     builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+    builder.Services.AddScoped<INoticeService, NoticeService>();
+    builder.Services.AddScoped<ILeaveApplicationService, LeaveApplicationService>();
+    builder.Services.AddScoped<IScholarshipService, ScholarshipService>();
+    builder.Services.AddScoped<ILiveNotificationService, LiveNotificationService>();
+    builder.Services.AddScoped<IExamService, ExamService>();
+    builder.Services.AddScoped<IAiAdvisorService, AiAdvisorService>();
+    builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+    builder.Services.AddScoped<IDashboardService, DashboardService>();
+    builder.Services.AddScoped<IUserService, UserService>();
+    
+    // ── Chatbot Service ─────────────────────────────────────────────
+    builder.Services.AddHttpClient<IChatbotService, ChatbotService>(client =>
+    {
+        var baseUrl = builder.Configuration["ChatbotApiBaseUrl"] ?? "http://localhost:8000/api/";
+        client.BaseAddress = new Uri(baseUrl);
+    });
 
     // ── Notifications ───────────────────────────────────────────────
     builder.Services.AddOptions();
@@ -87,7 +106,7 @@ try
         options.AddDefaultPolicy(policy =>
         {
             var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                ?? new[] { "http://localhost:3000", "http://127.0.0.1:3000" };
+                ?? new[] { "http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3002" };
             policy.WithOrigins(origins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
@@ -97,6 +116,7 @@ try
 
     // ── Controllers + Swagger + API Standards ──────────────────────
     builder.Services.AddControllers();
+    builder.Services.AddSignalR();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddProblemDetails();
     builder.Services.AddHealthChecks();
@@ -174,7 +194,10 @@ try
     app.UseHttpsRedirection();
     app.UseAuthentication();
     app.UseAuthorization();
+
     app.MapControllers();
+    app.MapHub<AssignmentSystem.Api.Hubs.ChatHub>("/chatHub");
+    app.MapHub<AssignmentSystem.Api.Hubs.NotificationHub>("/notificationHub");
     app.MapHealthChecks("/health");
 
     app.Run();

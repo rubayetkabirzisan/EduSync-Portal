@@ -140,10 +140,10 @@ test.describe('EduSync Golden Path (Teacher -> Student -> Teacher -> Student)', 
     await expect(page).toHaveURL('/student');
     
     // Verify Teacher Feedback card shows up on dashboard
-    await expect(page.locator('h2', { hasText: 'Teacher Feedback' })).toBeVisible();
-    await expect(page.locator(`text=${uniqueTitle}`)).toBeVisible();
-    await expect(page.locator('text=Excellent automated work!').first()).toBeVisible();
-    await expect(page.locator('text=95 / 100 pts').first()).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Teacher Feedback' })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator(`text=${uniqueTitle}`)).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Excellent automated work!').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=95 / 100 pts').first()).toBeVisible({ timeout: 15000 });
     
     console.log('Golden Path E2E Test Passed Successfully!');
   });

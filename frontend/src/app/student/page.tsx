@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
 import api from "@/lib/api";
-import { Assignment, Submission, PagedResponse } from "@/lib/types";
+import { Assignment, Submission, PagedResponse, StudentDashboardStatsDto } from "@/lib/types";
 import { StatCard } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -21,6 +21,10 @@ import {
   Calendar,
   Send,
   MessageSquare,
+  BookOpen,
+  CalendarDays,
+  Percent,
+  Banknote
 } from "lucide-react";
 
 export default function StudentDashboard() {
@@ -28,6 +32,7 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [stats, setStats] = useState<StudentDashboardStatsDto | null>(null);
 
   useEffect(() => {
     fetchStudentData();
@@ -36,13 +41,15 @@ export default function StudentDashboard() {
   const fetchStudentData = async () => {
     try {
       setLoading(true);
-      const [assignmentsRes, submissionsRes] = await Promise.all([
+      const [assignmentsRes, submissionsRes, statsRes] = await Promise.all([
         api.get<PagedResponse<Assignment>>("/student/assignments?pageSize=50"),
         api.get<PagedResponse<Submission>>("/student/submissions?pageSize=50"),
+        api.get<StudentDashboardStatsDto>("/Dashboard/student"),
       ]);
 
       setAssignments(assignmentsRes.data.items || []);
       setSubmissions(submissionsRes.data.items || []);
+      setStats(statsRes.data);
     } catch (err) {
       console.error("Failed to load student dashboard:", err);
     } finally {
@@ -155,6 +162,38 @@ export default function StudentDashboard() {
           value={gradedSubmissions.length > 0 ? `${averageGrade}%` : "N/A"}
           subtitle={gradedSubmissions.length > 0 ? "Overall coursework average" : "No graded tasks yet"}
           icon={Award}
+          color="purple"
+          loading={loading}
+        />
+        <StatCard
+          title="Enrolled Courses"
+          value={stats?.enrolledCourses || 0}
+          subtitle="Total subjects enrolled"
+          icon={BookOpen}
+          color="emerald"
+          loading={loading}
+        />
+        <StatCard
+          title="Upcoming Exams"
+          value={stats?.upcomingExams || 0}
+          subtitle="Scheduled in the future"
+          icon={CalendarDays}
+          color="amber"
+          loading={loading}
+        />
+        <StatCard
+          title="Attendance"
+          value={`${stats?.averageAttendancePercentage || 0}%`}
+          subtitle="Average present percentage"
+          icon={Percent}
+          color="indigo"
+          loading={loading}
+        />
+        <StatCard
+          title="Scholarship"
+          value={stats?.activeScholarshipStatus || "None"}
+          subtitle="Current active application"
+          icon={Banknote}
           color="purple"
           loading={loading}
         />

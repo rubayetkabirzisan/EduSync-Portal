@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
+import { AdminDashboardStatsDto } from "@/lib/types";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import {
@@ -15,6 +16,8 @@ import {
   PlusCircle,
   ArrowRight,
   Sparkles,
+  CalendarDays,
+  Banknote
 } from "lucide-react";
 
 interface OverviewStats {
@@ -27,20 +30,25 @@ interface OverviewStats {
 }
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<OverviewStats>({
+  const [stats, setStats] = useState<OverviewStats & AdminDashboardStatsDto>({
     usersCount: 0,
     classesCount: 0,
     subjectsCount: 0,
     teachingAssignmentsCount: 0,
     assignmentsCount: 0,
     submissionsCount: 0,
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalCourses: 0,
+    pendingLeaves: 0,
+    pendingScholarships: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [usersRes, classesRes, subjectsRes, taRes, assignRes, subRes] =
+        const [usersRes, classesRes, subjectsRes, taRes, assignRes, subRes, dashRes] =
           await Promise.all([
             api.get("/admin/users?pageSize=1"),
             api.get("/admin/classes?pageSize=1"),
@@ -48,6 +56,7 @@ export default function AdminDashboardPage() {
             api.get("/admin/teaching-assignments?pageSize=1"),
             api.get("/admin/assignments?pageSize=1"),
             api.get("/admin/submissions?pageSize=1"),
+            api.get<AdminDashboardStatsDto>("/Dashboard/admin"),
           ]);
 
         setStats({
@@ -57,6 +66,7 @@ export default function AdminDashboardPage() {
           teachingAssignmentsCount: taRes.data.totalCount || 0,
           assignmentsCount: assignRes.data.totalCount || 0,
           submissionsCount: subRes.data.totalCount || 0,
+          ...dashRes.data
         });
       } catch (err) {
         console.error("Failed to load dashboard metrics", err);
@@ -116,6 +126,22 @@ export default function AdminDashboardPage() {
       color: "from-rose-600 to-red-600",
       href: "/admin/submissions",
       badge: "Responses",
+    },
+    {
+      title: "Pending Leaves",
+      value: stats.pendingLeaves,
+      icon: CalendarDays,
+      color: "from-pink-600 to-rose-600",
+      href: "/admin/leaves",
+      badge: "Applications",
+    },
+    {
+      title: "Pending Scholarships",
+      value: stats.pendingScholarships,
+      icon: Banknote,
+      color: "from-lime-600 to-emerald-600",
+      href: "/admin/scholarships",
+      badge: "Financial Aid",
     },
   ];
 

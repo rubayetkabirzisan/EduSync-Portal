@@ -15,6 +15,12 @@ import {
   GraduationCap,
   LogOut,
   Sparkles,
+  BellRing,
+  CalendarDays,
+  Banknote,
+  Bot,
+  Clock,
+  MessageSquare,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -31,18 +37,32 @@ export function Sidebar() {
     { href: "/admin/teaching-assignments", label: "Teacher Allotment", icon: UserCheck },
     { href: "/admin/assignments", label: "All Assignments", icon: FileSpreadsheet },
     { href: "/admin/submissions", label: "All Submissions", icon: FileCheck },
+    { href: "/admin/notices", label: "Notices", icon: BellRing },
+    { href: "/admin/leaves", label: "Leaves", icon: CalendarDays },
+    { href: "/admin/scholarships", label: "Scholarships", icon: Banknote },
+    { href: "/admin/exams", label: "Exam Scheduler", icon: CalendarDays },
   ];
 
   const teacherLinks = [
     { href: "/teacher", label: "Teacher Dashboard", icon: LayoutDashboard },
     { href: "/teacher/assignments", label: "My Assignments", icon: FileSpreadsheet },
     { href: "/teacher/submissions", label: "Submissions & Grading", icon: FileCheck },
+    { href: "/teacher/attendance", label: "Mark Attendance", icon: Clock },
+    { href: "/teacher/notices", label: "Notices", icon: BellRing },
+    { href: "/teacher/chat", label: "Community Chat", icon: MessageSquare },
   ];
 
   const studentLinks = [
     { href: "/student", label: "Student Dashboard", icon: LayoutDashboard },
     { href: "/student/assignments", label: "My Class Tasks", icon: FileSpreadsheet },
     { href: "/student/submissions", label: "My Submissions", icon: GraduationCap },
+    { href: "/student/attendance", label: "My Attendance", icon: Clock },
+    { href: "/student/notices", label: "Notices", icon: BellRing },
+    { href: "/student/leaves", label: "Leave Applications", icon: CalendarDays },
+    { href: "/student/scholarships", label: "Scholarships", icon: Banknote },
+    { href: "/student/exams", label: "My Exams", icon: CalendarDays },
+    { href: "/student/advisor", label: "AI Advisor", icon: Bot },
+    { href: "/student/chat", label: "Community Chat", icon: MessageSquare },
   ];
 
   const links =

@@ -163,3 +163,190 @@ export interface GradeSubmissionRequest {
   marks: number;
   feedback?: string;
 }
+
+// ── Dashboard Stats ─────────────────────────────────────────────────
+export interface StudentDashboardStatsDto {
+  enrolledCourses: number;
+  pendingAssignments: number;
+  upcomingExams: number;
+  averageAttendancePercentage: number;
+  activeScholarshipStatus: string;
+}
+
+export interface TeacherDashboardStatsDto {
+  assignedClasses: number;
+  totalStudentsTaught: number;
+  upcomingExams: number;
+  pendingAssignmentGrades: number;
+}
+
+export interface AdminDashboardStatsDto {
+  totalStudents: number;
+  totalTeachers: number;
+  totalCourses: number;
+  pendingLeaves: number;
+  pendingScholarships: number;
+}
+
+// ── Notices ─────────────────────────────────────────────────────────
+export interface Notice {
+  id: string;
+  title: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  isPriority: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNoticeRequest {
+  title: string;
+  content: string;
+  isPriority: boolean;
+}
+
+export interface UpdateNoticeRequest {
+  title?: string;
+  content?: string;
+  isPriority?: boolean;
+}
+
+// ── Leaves ──────────────────────────────────────────────────────────
+export interface LeaveApplication {
+  id: string;
+  studentId: string;
+  studentName: string;
+  reason: string;
+  startDate: string;
+  endDate: string;
+  status: "Pending" | "Approved" | "Rejected";
+  adminFeedback?: string;
+  createdAt: string;
+}
+
+export interface CreateLeaveRequest {
+  reason: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface UpdateLeaveStatusRequest {
+  status: "Approved" | "Rejected";
+  adminFeedback?: string;
+}
+
+// ── Scholarships ────────────────────────────────────────────────────
+export interface Scholarship {
+  id: string;
+  name: string;
+  description: string;
+  amount: number;
+  deadline: string;
+  createdAt: string;
+}
+
+export interface CreateScholarshipRequest {
+  name: string;
+  description: string;
+  amount: number;
+  deadline: string;
+}
+
+export interface ScholarshipApplication {
+  id: string;
+  scholarshipId: string;
+  scholarshipName?: string;
+  studentId: string;
+  studentName?: string;
+  reason: string;
+  status: "Pending" | "UnderReview" | "Approved" | "Rejected" | "Disbursed";
+  adminFeedback?: string;
+  createdAt: string;
+}
+
+export interface ApplyScholarshipRequest {
+  scholarshipId: string;
+  reason: string;
+}
+
+export interface UpdateScholarshipApplicationRequest {
+  status: "UnderReview" | "Approved" | "Rejected" | "Disbursed";
+  adminFeedback?: string;
+}
+
+// ── Notifications ───────────────────────────────────────────────────
+export interface AppNotification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: string; // e.g. "Assignment", "Leave", "Scholarship", "General"
+  isRead: boolean;
+  relatedEntityId?: string;
+  createdAt: string;
+}
+
+// ── Attendance ──────────────────────────────────────────────────────
+export interface AttendanceRecord {
+  id: string;
+  studentId: string;
+  studentName?: string;
+  classId: string;
+  className?: string;
+  date: string;
+  status: "Present" | "Absent" | "Late" | "Excused";
+  recordedByTeacherId: string;
+  recordedByTeacherName?: string;
+  createdAt: string;
+}
+
+export interface MarkAttendanceRequest {
+  studentId: string;
+  classId: string;
+  date: string;
+  status: "Present" | "Absent" | "Late" | "Excused";
+}
+
+// ── Exams ───────────────────────────────────────────────────────────
+export interface Exam {
+  id: string;
+  title: string;
+  classId: string;
+  className?: string;
+  subjectId: string;
+  subjectName?: string;
+  startTime: string;
+  durationMinutes: number;
+  maxMarks: number;
+  roomName: string;
+  createdAt: string;
+}
+
+export interface CreateExamRequest {
+  title: string;
+  classId: string;
+  subjectId: string;
+  startTime: string;
+  durationMinutes: number;
+  maxMarks: number;
+  roomName: string;
+}
+
+// ── AI Advisor ──────────────────────────────────────────────────────
+export interface RecommendedSubjectDto {
+  subjectId: string;
+  name: string;
+  code: string;
+  reason: string;
+}
+
+// ── Community Chat ──────────────────────────────────────────────────
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderRole: string;
+  content: string;
+  timestamp: string;
+}

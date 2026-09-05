@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
 import api from "@/lib/api";
-import { Assignment, Submission, TeachingAssignment, PagedResponse } from "@/lib/types";
+import { Assignment, Submission, TeachingAssignment, PagedResponse, TeacherDashboardStatsDto } from "@/lib/types";
 import { StatCard } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +20,8 @@ import {
   AlertCircle,
   Sparkles,
   Calendar,
+  Users,
+  CalendarDays
 } from "lucide-react";
 
 export default function TeacherDashboard() {
@@ -28,6 +30,7 @@ export default function TeacherDashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [allotments, setAllotments] = useState<TeachingAssignment[]>([]);
+  const [stats, setStats] = useState<TeacherDashboardStatsDto | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -36,15 +39,17 @@ export default function TeacherDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [assignmentsRes, submissionsRes, allotmentsRes] = await Promise.all([
+      const [assignmentsRes, submissionsRes, allotmentsRes, statsRes] = await Promise.all([
         api.get<PagedResponse<Assignment>>("/assignments?pageSize=50"),
         api.get<PagedResponse<Submission>>("/assignments/submissions?pageSize=50"),
         api.get<TeachingAssignment[]>("/assignments/my-allotments"),
+        api.get<TeacherDashboardStatsDto>("/Dashboard/teacher"),
       ]);
 
       setAssignments(assignmentsRes.data.items || []);
       setSubmissions(submissionsRes.data.items || []);
       setAllotments(allotmentsRes.data || []);
+      setStats(statsRes.data);
     } catch (err) {
       console.error("Failed to load teacher dashboard data:", err);
     } finally {
@@ -137,11 +142,19 @@ export default function TeacherDashboard() {
           loading={loading}
         />
         <StatCard
-          title="Graded Submissions"
-          value={submissions.filter((s) => s.status === "Graded").length}
-          subtitle="Completed evaluations"
-          icon={CheckCircle2}
+          title="Total Students"
+          value={stats?.totalStudentsTaught || 0}
+          subtitle="Across all assigned classes"
+          icon={Users}
           color="emerald"
+          loading={loading}
+        />
+        <StatCard
+          title="Upcoming Exams"
+          value={stats?.upcomingExams || 0}
+          subtitle="Scheduled for your subjects"
+          icon={CalendarDays}
+          color="rose"
           loading={loading}
         />
       </div>

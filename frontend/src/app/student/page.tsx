@@ -84,9 +84,8 @@ export default function StudentDashboard() {
     .slice(0, 4);
 
   // Recent graded submissions with feedback
-  const recentFeedback = gradedSubmissions
-    .filter((s) => s.feedback)
-    .sort((a, b) => new Date(b.gradedAt || b.submittedAt).getTime() - new Date(a.gradedAt || a.submittedAt).getTime())
+  const recentFeedback = submissions
+    .filter((s) => s.status === "Graded")
     .slice(0, 3);
 
   return (

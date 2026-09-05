@@ -41,10 +41,11 @@ export default function StudentDashboard() {
   const fetchStudentData = async () => {
     try {
       setLoading(true);
+      const timestamp = Date.now();
       const [assignmentsRes, submissionsRes, statsRes] = await Promise.all([
-        api.get<PagedResponse<Assignment>>("/student/assignments?pageSize=50"),
-        api.get<PagedResponse<Submission>>("/student/submissions?pageSize=50"),
-        api.get<StudentDashboardStatsDto>("/Dashboard/student"),
+        api.get<PagedResponse<Assignment>>(`/student/assignments?pageSize=50&_t=${timestamp}`),
+        api.get<PagedResponse<Submission>>(`/student/submissions?pageSize=50&_t=${timestamp}`),
+        api.get<StudentDashboardStatsDto>(`/Dashboard/student?_t=${timestamp}`),
       ]);
 
       setAssignments(assignmentsRes.data.items || []);
@@ -322,10 +323,10 @@ export default function StudentDashboard() {
                     className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 space-y-2"
                   >
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white break-words">
                         {sub.assignmentTitle}
                       </p>
-                      <Badge variant="success">
+                      <Badge variant="success" className="shrink-0 ml-2">
                         {sub.marks} / {sub.maxMarks} pts
                       </Badge>
                     </div>

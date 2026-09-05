@@ -139,7 +139,13 @@ test.describe('EduSync Golden Path (Teacher -> Student -> Teacher -> Student)', 
 
     await expect(page).toHaveURL('/student');
 
-    // Verify Teacher Feedback card shows up on dashboard
+    // Navigate to Class Tasks (Assignments) to verify it shows as Graded there first
+    await page.goto('/student/assignments');
+    const gradedRow = page.locator('tr', { hasText: uniqueTitle });
+    await expect(gradedRow.locator('text=Graded')).toBeVisible({ timeout: 15000 });
+
+    // Navigate back to Dashboard to verify Feedback card
+    await page.goto('/student');
     await expect(page.getByRole('heading', { name: 'Teacher Feedback' })).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(uniqueTitle, { exact: false }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Excellent automated work!', { exact: false }).first()).toBeVisible({ timeout: 15000 });

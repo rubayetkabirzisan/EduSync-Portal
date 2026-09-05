@@ -10,6 +10,13 @@ test.describe('EduSync Golden Path (Teacher -> Student -> Teacher -> Student)', 
 
   test('Complete Golden Path', async ({ page }) => {
     test.setTimeout(90000); // 90 seconds timeout for full E2E flow
+    
+    // Capture browser console logs
+    page.on('console', msg => {
+      if (msg.text().includes('DASHBOARD_RENDER_DEBUG') || msg.type() === 'error') {
+        console.log(`PAGE LOG: ${msg.text()}`);
+      }
+    });
 
     // ==========================================
     // 1. TEACHER: CREATE ASSIGNMENT

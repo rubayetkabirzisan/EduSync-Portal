@@ -88,6 +88,9 @@ export default function StudentDashboard() {
     .filter((s) => s.status === "Graded")
     .slice(0, 3);
 
+  console.log("DASHBOARD_RENDER_DEBUG - Total Submissions:", submissions.length, "Submissions Array:", JSON.stringify(submissions.map(s => ({ id: s.id, status: s.status, title: s.assignmentTitle, marks: s.marks }))));
+  console.log("DASHBOARD_RENDER_DEBUG - Recent Feedback Array:", JSON.stringify(recentFeedback.map(s => ({ title: s.assignmentTitle, status: s.status }))));
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Welcome Banner */}

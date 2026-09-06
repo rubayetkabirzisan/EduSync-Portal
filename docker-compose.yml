@@ -28,9 +28,19 @@ services:
       - "5080:5080"
     environment:
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=assignment_system;Username=postgres;Password=postgres
+      - ChatbotApiBaseUrl=http://chatbot:8000/api/
     depends_on:
       postgres:
         condition: service_healthy
+
+  chatbot:
+    build:
+      context: .
+      dockerfile: chatterbot.Dockerfile
+    container_name: assignment-system-chatbot
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
 
   web:
     build:
@@ -44,6 +54,7 @@ services:
       - NEXT_PUBLIC_API_BASE_URL=http://localhost:5080/api
     depends_on:
       - api
+      - chatbot
 
 volumes:
   postgres_data:

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { MessageSquare, X, Send, Bot, User, Sparkles, Loader2, Minimize2, Maximize2 } from "lucide-react";
+import api from "@/lib/api";
 
 export function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,27 +31,12 @@ export function ChatbotWidget() {
     setIsLoading(true);
 
     try {
-      // Typically we'd call our backend proxy or Django directly here.
-      // For Phase 6 we will implement the actual integration. 
-      // For Phase 7 UI, we provide the UI and mocked delay to simulate it.
-      
-      const API_URL = "http://127.0.0.1:5080/api/Chatbot/chat";
-      // This fetch is purely speculative, Phase 6 will finalize the implementation
-      // We will try to fetch, if it fails we mock a response for now
       let botResponse = "";
       try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
-          },
-          body: JSON.stringify({ message: userMessage }),
-        });
+        const response = await api.post("/Chatbot/chat", { message: userMessage });
         
-        if (response.ok) {
-          const data = await response.json();
-          botResponse = data.reply || data.response || "I received your message.";
+        if (response.data) {
+          botResponse = response.data.reply || response.data.response || "I received your message.";
         } else {
           throw new Error("Backend returned an error");
         }

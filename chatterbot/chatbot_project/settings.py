@@ -12,7 +12,7 @@ if os.path.exists(os.path.join(BASE_DIR, '.env')):
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = 'django-insecure-tusochs$y0(mdkh^3tjvh8371=#n2+)v+ekvw#z_#sg-&*#mvw'
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ['*']
 
 # Application definition

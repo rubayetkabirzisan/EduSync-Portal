@@ -22,5 +22,5 @@ COPY chatterbot/ .
 # Expose port
 EXPOSE 8000
 
-# Run the Django server with Gunicorn to save memory
-CMD ["gunicorn", "--workers", "1", "--threads", "2", "--bind", "0.0.0.0:8000", "chatbot_project.wsgi:application"]
+# Run the Django server with Gunicorn, using Render's dynamically assigned $PORT
+CMD gunicorn --workers 1 --threads 2 --bind 0.0.0.0:$PORT chatbot_project.wsgi:application

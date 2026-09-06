@@ -1,13 +1,14 @@
 from pathlib import Path
-import environ
+
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Initialize environment variables
-env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+# Load environment variables (from .env if it exists)
+if os.path.exists(os.path.join(BASE_DIR, '.env')):
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = 'django-insecure-tusochs$y0(mdkh^3tjvh8371=#n2+)v+ekvw#z_#sg-&*#mvw'
@@ -68,11 +69,11 @@ WSGI_APPLICATION = 'chatbot_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('DB_NAME'),  # Database name
-        'USER': env('DB_USER'),  # Database user
-        'PASSWORD': env('DB_PASSWORD'),  # Database password
-        'HOST': env('DB_HOST'),  # Database host
-        'PORT': env('DB_PORT'),  # Database port
+        'NAME': os.environ.get('DB_NAME', 'postgres'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 

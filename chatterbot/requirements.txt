@@ -1,4 +1,4 @@
-﻿asgiref==3.8.1
+asgiref==3.8.1
 blis==0.7.11
 catalogue==2.0.10
 certifi==2025.1.31

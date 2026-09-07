@@ -5,6 +5,7 @@ WORKDIR /app
 # Optimize Python memory usage for small containers
 ENV MALLOC_ARENA_MAX=2
 ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
 
 # Install system dependencies required by spaCy and python packages
 RUN apt-get update && apt-get install -y \
@@ -22,5 +23,5 @@ COPY chatterbot/ .
 # Expose port
 EXPOSE 8000
 
-# Run the Django server with Gunicorn, using Render's dynamically assigned $PORT
-CMD gunicorn --workers 1 --threads 2 --bind 0.0.0.0:$PORT chatbot_project.wsgi:application
+# Apply the ChatterBot/Django schema, then start Gunicorn. Render can override PORT.
+CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn --workers 1 --threads 2 --bind 0.0.0.0:$PORT chatbot_project.wsgi:application"]

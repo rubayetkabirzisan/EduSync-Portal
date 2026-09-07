@@ -2,11 +2,23 @@
 
 import React, { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { Scholarship, ScholarshipApplication, PagedResponse } from "@/lib/types";
+import { Scholarship, ScholarshipApplication } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/toast-context";
-import { Banknote, Plus, Info, X, Clock, CheckCircle2, XCircle, Download, FileText } from "lucide-react";
+import { Banknote, Plus, X, Clock, CheckCircle2, XCircle, FileText } from "lucide-react";
+
+async function getStudentScholarshipData() {
+  const [scholarshipsResponse, applicationsResponse] = await Promise.all([
+    api.get<Scholarship[]>("/scholarships"),
+    api.get<ScholarshipApplication[]>("/scholarships/my-applications"),
+  ]);
+
+  return {
+    scholarships: scholarshipsResponse.data,
+    applications: applicationsResponse.data,
+  };
+}
 
 export default function StudentScholarshipsPage() {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
@@ -18,18 +30,33 @@ export default function StudentScholarshipsPage() {
   const { addToast } = useToast();
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    let cancelled = false;
+
+    getStudentScholarshipData()
+      .then((data) => {
+        if (cancelled) return;
+        setScholarships(data.scholarships);
+        setMyApplications(data.applications);
+      })
+      .catch((err) => {
+        console.error("Failed to load scholarships:", err);
+        addToast("Failed to load scholarship data", "error");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addToast]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [scholRes, appRes] = await Promise.all([
-        api.get<Scholarship[]>("/scholarships"),
-        api.get<ScholarshipApplication[]>("/scholarships/applications/my"),
-      ]);
-      setScholarships(scholRes.data || []);
-      setMyApplications(appRes.data || []);
+      const data = await getStudentScholarshipData();
+      setScholarships(data.scholarships);
+      setMyApplications(data.applications);
     } catch (err) {
       console.error("Failed to load scholarships:", err);
     } finally {
@@ -53,10 +80,10 @@ export default function StudentScholarshipsPage() {
       setIsModalOpen(false);
       setReason("");
       setSelectedScholarshipId("");
-      fetchData();
-    } catch (err: any) {
+      await fetchData();
+    } catch (err) {
       console.error(err);
-      addToast(err.response?.data || "Failed to submit application", "error");
+      addToast("Failed to submit scholarship application", "error");
     }
   };
 
@@ -134,7 +161,7 @@ export default function StudentScholarshipsPage() {
             <div className="text-center py-8 text-slate-400 text-sm">Loading applications...</div>
           ) : myApplications.length === 0 ? (
             <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-center text-slate-500">
-              You haven't applied for any scholarships yet.
+              You haven&apos;t applied for any scholarships yet.
             </div>
           ) : (
             myApplications.map((app) => (

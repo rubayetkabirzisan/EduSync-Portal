@@ -5,6 +5,7 @@ namespace AssignmentSystem.Application.DTOs.Attendance;
 
 public record CreateAttendanceDto
 {
+    public Guid ClassId { get; init; }
     public Guid SubjectId { get; init; }
     public DateTime Date { get; init; }
     
@@ -15,6 +16,6 @@ public record CreateAttendanceDto
 public record StudentAttendanceRecordDto
 {
     public Guid StudentId { get; init; }
-    public bool IsPresent { get; init; }
+    public string Status { get; init; } = "Present";
     public string Remarks { get; init; } = string.Empty;
 }

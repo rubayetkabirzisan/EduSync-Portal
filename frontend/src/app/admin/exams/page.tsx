@@ -1,45 +1,51 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import axios from "axios";
 import api from "@/lib/api";
-import { Exam, CreateExamRequest, PagedResponse } from "@/lib/types";
+import { Class, Exam, CreateExamRequest, PagedResponse } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/toast-context";
-import { CalendarDays, Plus, X, Calendar as CalendarIcon, Clock, Users, BookOpen } from "lucide-react";
+import { CalendarDays, Plus, X, Calendar as CalendarIcon, Clock, Users, BookOpen, Pencil } from "lucide-react";
+
+const toLocalDateTimeInput = (value: Date | string = new Date()) => {
+  const date = value instanceof Date ? value : new Date(value);
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+};
+
+const createDefaultExam = (): CreateExamRequest => ({
+  title: "",
+  classId: "",
+  subjectId: "",
+  startTime: toLocalDateTimeInput(),
+  durationMinutes: 120,
+  maxMarks: 100,
+  roomName: "Room 101"
+});
 
 export default function AdminExamsPage() {
   const [exams, setExams] = useState<Exam[]>([]);
-  const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newExam, setNewExam] = useState<CreateExamRequest>({
-    title: "",
-    classId: "",
-    subjectId: "",
-    startTime: new Date().toISOString().slice(0, 16),
-    durationMinutes: 120,
-    maxMarks: 100,
-    roomName: "Room 101"
-  });
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [newExam, setNewExam] = useState<CreateExamRequest>(createDefaultExam);
   
   const { addToast } = useToast();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [examsRes, clsRes, subRes] = await Promise.all([
-        api.get<PagedResponse<Exam>>("/exams?pageSize=100"),
-        api.get<PagedResponse<{id:string; name:string}>>("/admin/classes?pageSize=100"),
+        api.get<Exam[]>("/exams"),
+        api.get<PagedResponse<Class>>("/admin/classes?pageSize=100"),
         api.get<PagedResponse<{id:string; name:string}>>("/admin/subjects?pageSize=100")
       ]);
-      setExams(examsRes.data.items || []);
+      setExams(Array.isArray(examsRes.data) ? examsRes.data : []);
       setClasses(clsRes.data.items || []);
       setSubjects(subRes.data.items || []);
     } catch (err) {
@@ -47,21 +53,71 @@ export default function AdminExamsPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const loadTimer = window.setTimeout(() => void fetchData(), 0);
+    return () => window.clearTimeout(loadTimer);
+  }, [fetchData]);
+
+  const openCreateModal = () => {
+    setEditingExam(null);
+    setNewExam(createDefaultExam());
+    setIsModalOpen(true);
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const openEditModal = (exam: Exam) => {
+    setEditingExam(exam);
+    setNewExam({
+      title: exam.title,
+      classId: exam.classId,
+      subjectId: exam.subjectId,
+      startTime: toLocalDateTimeInput(exam.startTime),
+      durationMinutes: exam.durationMinutes,
+      maxMarks: exam.maxMarks,
+      roomName: exam.roomName
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingExam(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post("/exams", {
+      if (newExam.durationMinutes < 15 || newExam.maxMarks < 1) {
+        addToast("Enter a duration of at least 15 minutes and at least 1 maximum mark.", "error");
+        return;
+      }
+
+      const payload = {
         ...newExam,
         startTime: new Date(newExam.startTime).toISOString()
-      });
-      addToast("Exam scheduled successfully!", "success");
-      setIsModalOpen(false);
-      fetchData();
-    } catch (err: any) {
-      console.error(err);
-      addToast(err.response?.data?.message || err.response?.data || "Failed to schedule exam. Possible conflict.", "error");
+      };
+
+      if (editingExam) {
+        await api.put(`/exams/${editingExam.id}`, payload);
+        addToast("Exam updated successfully!", "success");
+      } else {
+        await api.post("/exams", payload);
+        addToast("Exam scheduled successfully!", "success");
+      }
+
+      closeModal();
+      await fetchData();
+    } catch (err: unknown) {
+      const responseData = axios.isAxiosError(err) ? err.response?.data : undefined;
+      const message = typeof responseData === "object" && responseData !== null && "message" in responseData
+        ? String(responseData.message)
+        : typeof responseData === "string"
+          ? responseData
+          : editingExam
+            ? "Failed to update exam."
+            : "Failed to schedule exam. Possible conflict.";
+      addToast(message, "error");
     }
   };
 
@@ -81,7 +137,7 @@ export default function AdminExamsPage() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="gap-2 cursor-pointer bg-orange-600 hover:bg-orange-700 text-white border-none">
+        <Button onClick={openCreateModal} className="gap-2 cursor-pointer bg-orange-600 hover:bg-orange-700 text-white border-none">
           <Plus className="w-4 h-4" /> Schedule Exam
         </Button>
       </div>
@@ -100,14 +156,27 @@ export default function AdminExamsPage() {
             
             return (
               <div key={exam.id} className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:shadow-md transition-shadow relative overflow-hidden">
-                {!isUpcoming && (
-                  <div className="absolute top-0 right-0 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 rounded-bl-lg">
-                    Completed
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">
+                    {exam.title}
+                  </h3>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {!isUpcoming && (
+                      <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 rounded-md">
+                        Completed
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditModal(exam)}
+                      aria-label={`Edit ${exam.title}`}
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Edit
+                    </Button>
                   </div>
-                )}
-                <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-3 pr-16 leading-tight">
-                  {exam.title}
-                </h3>
+                </div>
                 
                 <div className="space-y-2.5">
                   <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
@@ -144,12 +213,14 @@ export default function AdminExamsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-slate-800 overflow-hidden my-8 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
-              <h3 className="font-bold text-lg text-slate-900 dark:text-white">Schedule New Exam</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white">
+                {editingExam ? "Edit Exam" : "Schedule New Exam"}
+              </h3>
+              <button onClick={closeModal} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleCreate} className="p-4 space-y-4">
+            <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Exam Title
@@ -177,7 +248,9 @@ export default function AdminExamsPage() {
                   >
                     <option value="" disabled>Select Class</option>
                     {classes.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                      <option key={c.id} value={c.id}>
+                        {c.name}{c.section ? ` - ${c.section}` : ""}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -236,8 +309,11 @@ export default function AdminExamsPage() {
                     required
                     type="number"
                     min="15"
-                    value={newExam.durationMinutes}
-                    onChange={(e) => setNewExam({ ...newExam, durationMinutes: parseInt(e.target.value) })}
+                    value={newExam.durationMinutes || ""}
+                    onChange={(e) => setNewExam({
+                      ...newExam,
+                      durationMinutes: e.target.value === "" ? 0 : e.target.valueAsNumber
+                    })}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
                   />
                 </div>
@@ -249,19 +325,22 @@ export default function AdminExamsPage() {
                     required
                     type="number"
                     min="1"
-                    value={newExam.maxMarks}
-                    onChange={(e) => setNewExam({ ...newExam, maxMarks: parseInt(e.target.value) })}
+                    value={newExam.maxMarks || ""}
+                    onChange={(e) => setNewExam({
+                      ...newExam,
+                      maxMarks: e.target.value === "" ? 0 : e.target.valueAsNumber
+                    })}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
                   />
                 </div>
               </div>
               
               <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                <Button type="button" variant="outline" onClick={closeModal}>
                   Cancel
                 </Button>
                 <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white border-none">
-                  Save to Schedule
+                  {editingExam ? "Save Changes" : "Save to Schedule"}
                 </Button>
               </div>
             </form>

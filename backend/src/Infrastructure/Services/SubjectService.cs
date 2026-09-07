@@ -21,7 +21,8 @@ public class SubjectService : ISubjectService
         var entity = new Subject
         {
             Name = request.Name,
-            Code = request.Code
+            Code = request.Code,
+            Syllabus = request.Syllabus
         };
 
         _db.Subjects.Add(entity);
@@ -64,6 +65,7 @@ public class SubjectService : ISubjectService
         if (entity is null) return null;
 
         if (request.Name is not null) entity.Name = request.Name;
+        if (request.Syllabus is not null) entity.Syllabus = request.Syllabus;
         if (request.Code is not null)
         {
             if (await _db.Subjects.AnyAsync(s => s.Code == request.Code && s.Id != id))
@@ -90,6 +92,7 @@ public class SubjectService : ISubjectService
         Id = s.Id,
         Name = s.Name,
         Code = s.Code,
+        Syllabus = s.Syllabus,
         CreatedAt = s.CreatedAt
     };
 }

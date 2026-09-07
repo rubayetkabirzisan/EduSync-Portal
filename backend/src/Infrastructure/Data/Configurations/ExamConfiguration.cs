@@ -18,6 +18,9 @@ public class ExamConfiguration : IEntityTypeConfiguration<Exam>
             .IsRequired()
             .HasMaxLength(50);
 
+        builder.Property(e => e.MaxMarks)
+            .IsRequired();
+
         builder.HasOne(e => e.Class)
             .WithMany()
             .HasForeignKey(e => e.ClassId)

@@ -8,7 +8,7 @@ namespace AssignmentSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/admin/users")]
-[Authorize(Roles = "Admin,Teacher")]
+[Authorize(Roles = "Admin")]
 public class AdminUsersController : ControllerBase
 {
     private readonly IUserService _userService;

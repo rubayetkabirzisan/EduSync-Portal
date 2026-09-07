@@ -12,6 +12,7 @@ public class Attendance
     public Subject Subject { get; set; } = null!;
     
     public DateTime Date { get; set; }
+    public string Status { get; set; } = "Present";
     public bool IsPresent { get; set; }
     public string Remarks { get; set; } = string.Empty;
 }

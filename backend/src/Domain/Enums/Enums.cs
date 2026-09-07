@@ -41,5 +41,6 @@ public enum ScholarshipStatus
     Pending,
     UnderReview,
     Approved,
-    Rejected
+    Rejected,
+    Disbursed
 }

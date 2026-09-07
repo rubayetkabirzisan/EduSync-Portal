@@ -11,6 +11,8 @@ public record ExamDto
     public Guid SubjectId { get; init; }
     public string SubjectName { get; init; } = string.Empty;
     public DateTime StartTime { get; init; }
-    public DateTime EndTime { get; init; }
-    public string RoomNumber { get; init; } = string.Empty;
+    public int DurationMinutes { get; init; }
+    public int MaxMarks { get; init; }
+    public string RoomName { get; init; } = string.Empty;
+    public DateTime CreatedAt { get; init; }
 }

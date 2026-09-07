@@ -13,6 +13,10 @@ public class AttendanceConfiguration : IEntityTypeConfiguration<Attendance>
         builder.Property(a => a.Date)
             .IsRequired();
 
+        builder.Property(a => a.Status)
+            .IsRequired()
+            .HasMaxLength(20);
+
         builder.Property(a => a.Remarks)
             .HasMaxLength(250);
 

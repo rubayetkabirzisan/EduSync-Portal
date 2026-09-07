@@ -11,4 +11,5 @@ public interface IExamService
     Task<ExamDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IEnumerable<ExamDto>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<ExamDto> CreateAsync(CreateExamDto dto, CancellationToken cancellationToken = default);
+    Task<ExamDto> UpdateAsync(Guid id, CreateExamDto dto, CancellationToken cancellationToken = default);
 }

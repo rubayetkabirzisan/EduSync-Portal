@@ -59,4 +59,23 @@ public class ExamsController : ControllerBase
             return NotFound(new { message = ex.Message });
         }
     }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Update(Guid id, CreateExamDto dto, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var exam = await _examService.UpdateAsync(id, dto, cancellationToken);
+            return Ok(exam);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (System.Collections.Generic.KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
 }

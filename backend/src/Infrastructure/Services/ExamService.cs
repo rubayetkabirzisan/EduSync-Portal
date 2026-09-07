@@ -44,24 +44,35 @@ public class ExamService : IExamService
 
     public async Task<ExamDto> CreateAsync(CreateExamDto dto, CancellationToken cancellationToken = default)
     {
-        if (dto.StartTime >= dto.EndTime)
-            throw new InvalidOperationException("End time must be after start time.");
+        if (string.IsNullOrWhiteSpace(dto.Title))
+            throw new InvalidOperationException("Exam title is required.");
+
+        if (dto.DurationMinutes < 15)
+            throw new InvalidOperationException("Exam duration must be at least 15 minutes.");
+
+        if (dto.MaxMarks < 1)
+            throw new InvalidOperationException("Maximum marks must be at least 1.");
+
+        if (string.IsNullOrWhiteSpace(dto.RoomName))
+            throw new InvalidOperationException("Room or location is required.");
+
+        var endTime = dto.StartTime.AddMinutes(dto.DurationMinutes);
 
         // CONFLICT DETECTION: Check Room availability
         var roomConflict = await _context.Exams
-            .AnyAsync(e => e.RoomNumber == dto.RoomNumber && 
-                           e.StartTime < dto.EndTime && 
+            .AnyAsync(e => e.RoomNumber == dto.RoomName.Trim() &&
+                           e.StartTime < endTime &&
                            e.EndTime > dto.StartTime, cancellationToken);
-                           
+
         if (roomConflict)
-            throw new InvalidOperationException($"Room {dto.RoomNumber} is already booked during this time.");
+            throw new InvalidOperationException($"Room {dto.RoomName.Trim()} is already booked during this time.");
 
         // CONFLICT DETECTION: Check Class availability (a class cannot take two exams at the same time)
         var classConflict = await _context.Exams
-            .AnyAsync(e => e.ClassId == dto.ClassId && 
-                           e.StartTime < dto.EndTime && 
+            .AnyAsync(e => e.ClassId == dto.ClassId &&
+                           e.StartTime < endTime &&
                            e.EndTime > dto.StartTime, cancellationToken);
-                           
+
         if (classConflict)
             throw new InvalidOperationException("This class already has an exam scheduled during this time.");
 
@@ -78,8 +89,9 @@ public class ExamService : IExamService
             ClassId = dto.ClassId,
             SubjectId = dto.SubjectId,
             StartTime = dto.StartTime,
-            EndTime = dto.EndTime,
-            RoomNumber = dto.RoomNumber
+            EndTime = endTime,
+            MaxMarks = dto.MaxMarks,
+            RoomNumber = dto.RoomName.Trim()
         };
 
         _context.Exams.Add(exam);
@@ -92,16 +104,79 @@ public class ExamService : IExamService
         return MapToDto(exam);
     }
 
+    public async Task<ExamDto> UpdateAsync(Guid id, CreateExamDto dto, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Title))
+            throw new InvalidOperationException("Exam title is required.");
+
+        if (dto.DurationMinutes < 15)
+            throw new InvalidOperationException("Exam duration must be at least 15 minutes.");
+
+        if (dto.MaxMarks < 1)
+            throw new InvalidOperationException("Maximum marks must be at least 1.");
+
+        if (string.IsNullOrWhiteSpace(dto.RoomName))
+            throw new InvalidOperationException("Room or location is required.");
+
+        var exam = await _context.Exams.FindAsync(new object[] { id }, cancellationToken)
+            ?? throw new KeyNotFoundException("Exam not found.");
+        var endTime = dto.StartTime.AddMinutes(dto.DurationMinutes);
+        var roomName = dto.RoomName.Trim();
+
+        var roomConflict = await _context.Exams.AnyAsync(e =>
+            e.Id != id &&
+            e.RoomNumber == roomName &&
+            e.StartTime < endTime &&
+            e.EndTime > dto.StartTime,
+            cancellationToken);
+
+        if (roomConflict)
+            throw new InvalidOperationException($"Room {roomName} is already booked during this time.");
+
+        var classConflict = await _context.Exams.AnyAsync(e =>
+            e.Id != id &&
+            e.ClassId == dto.ClassId &&
+            e.StartTime < endTime &&
+            e.EndTime > dto.StartTime,
+            cancellationToken);
+
+        if (classConflict)
+            throw new InvalidOperationException("This class already has an exam scheduled during this time.");
+
+        var classEntity = await _context.Classes.FindAsync(new object[] { dto.ClassId }, cancellationToken)
+            ?? throw new KeyNotFoundException("Class not found.");
+        var subjectEntity = await _context.Subjects.FindAsync(new object[] { dto.SubjectId }, cancellationToken)
+            ?? throw new KeyNotFoundException("Subject not found.");
+
+        exam.Title = dto.Title.Trim();
+        exam.ClassId = dto.ClassId;
+        exam.SubjectId = dto.SubjectId;
+        exam.StartTime = dto.StartTime;
+        exam.EndTime = endTime;
+        exam.MaxMarks = dto.MaxMarks;
+        exam.RoomNumber = roomName;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        exam.Class = classEntity;
+        exam.Subject = subjectEntity;
+        return MapToDto(exam);
+    }
+
     private static ExamDto MapToDto(Exam e) => new()
     {
         Id = e.Id,
         Title = e.Title,
         ClassId = e.ClassId,
-        ClassName = e.Class?.Name ?? string.Empty,
+        ClassName = e.Class is null
+            ? string.Empty
+            : $"{e.Class.Name}{(string.IsNullOrWhiteSpace(e.Class.Section) ? string.Empty : $" - {e.Class.Section}")}",
         SubjectId = e.SubjectId,
         SubjectName = e.Subject?.Name ?? string.Empty,
         StartTime = e.StartTime,
-        EndTime = e.EndTime,
-        RoomNumber = e.RoomNumber
+        DurationMinutes = (int)(e.EndTime - e.StartTime).TotalMinutes,
+        MaxMarks = e.MaxMarks,
+        RoomName = e.RoomNumber,
+        CreatedAt = e.CreatedAt
     };
 }

@@ -59,6 +59,14 @@ public class ScholarshipsController : ControllerBase
         return Ok(applications);
     }
 
+    [HttpGet("applications")]
+    [Authorize(Roles = nameof(UserRole.Admin))]
+    public async Task<IActionResult> GetAllApplications(CancellationToken cancellationToken)
+    {
+        var applications = await _scholarshipService.GetAllApplicationsAsync(cancellationToken);
+        return Ok(applications);
+    }
+
     [HttpGet("{scholarshipId}/applications")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> GetApplicationsForScholarship(Guid scholarshipId, CancellationToken cancellationToken)

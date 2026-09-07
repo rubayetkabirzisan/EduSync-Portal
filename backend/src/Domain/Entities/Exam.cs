@@ -12,6 +12,7 @@ public class Exam
     public Subject Subject { get; set; } = null!;
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
+    public int MaxMarks { get; set; }
     public string RoomNumber { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -33,28 +33,67 @@ public class AiAdvisorService : IAiAdvisorService
                 .ToListAsync(cancellationToken);
         }
 
-        // Get all available subjects not yet enrolled
+        // Prefer subjects outside the student's current class as possible next steps.
         var availableSubjects = await _context.Subjects
             .Where(s => !enrolledSubjectIds.Contains(s.Id))
+            .OrderBy(s => s.Name)
             .ToListAsync(cancellationToken);
 
-        // MOCK AI LOGIC: In a real app, this would use ML/GPT based on past grades (GPA).
-        // For this implementation, we simulate an AI analysis by recommending advanced courses
-        // if they have completed basics, or just picking suitable next steps.
-        
+        // If there are fewer than three new subjects, fill the plan with subjects from
+        // the student's current class so the advisor still provides useful guidance.
+        var currentSubjects = await _context.Subjects
+            .Where(s => enrolledSubjectIds.Contains(s.Id))
+            .OrderBy(s => s.Name)
+            .ToListAsync(cancellationToken);
+
+        var candidates = availableSubjects
+            .Concat(currentSubjects)
+            .DistinctBy(subject => subject.Id)
+            .Take(3)
+            .ToList();
+
+        var subjectPerformance = await _context.Submissions
+            .Where(submission =>
+                submission.StudentId == studentId &&
+                submission.Marks.HasValue &&
+                submission.Assignment.MaxMarks > 0)
+            .GroupBy(submission => submission.Assignment.SubjectId)
+            .Select(group => new
+            {
+                SubjectId = group.Key,
+                AveragePercentage = group.Average(submission =>
+                    submission.Marks!.Value * 100.0 / submission.Assignment.MaxMarks)
+            })
+            .ToDictionaryAsync(
+                item => item.SubjectId,
+                item => item.AveragePercentage,
+                cancellationToken);
+
         var recommendations = new List<RecommendedSubjectDto>();
-        var random = new Random();
-        double mockGpa = 3.0 + (random.NextDouble() * 1.0); // Simulate GPA between 3.0 and 4.0
-
-        foreach (var subject in availableSubjects.Take(3)) // Recommend top 3
+        foreach (var subject in candidates)
         {
-            string reason = mockGpa >= 3.5 
-                ? $"With your stellar simulated GPA of {mockGpa:F2}, you are ready for advanced topics in {subject.Name}." 
-                : $"Based on your academic profile, {subject.Name} aligns well with your next steps.";
+            var isCurrentSubject = enrolledSubjectIds.Contains(subject.Id);
+            var reason = isCurrentSubject
+                ? BuildCurrentSubjectReason(subject.Name, subjectPerformance.GetValueOrDefault(subject.Id))
+                : $"{subject.Name} is available outside your current class subjects and is a possible next step for broadening your study plan.";
 
-            recommendations.Add(new RecommendedSubjectDto(subject.Id, subject.Name, subject.Code, reason));
+            recommendations.Add(new RecommendedSubjectDto(subject.Id, subject.Name, subject.Code, reason, subject.Syllabus));
         }
 
         return recommendations;
+    }
+
+    private static string BuildCurrentSubjectReason(string subjectName, double averagePercentage)
+    {
+        if (averagePercentage <= 0)
+            return $"{subjectName} is part of your current class plan. Complete graded work in this subject to receive more performance-specific guidance.";
+
+        if (averagePercentage < 60)
+            return $"Your graded work averages {averagePercentage:F0}% in {subjectName}. Prioritizing this subject can help strengthen the areas where you need the most support.";
+
+        if (averagePercentage >= 85)
+            return $"Your graded work averages {averagePercentage:F0}% in {subjectName}. You are performing strongly and may be ready for more advanced work in this area.";
+
+        return $"Your graded work averages {averagePercentage:F0}% in {subjectName}. Continuing this subject will help you build on your current progress.";
     }
 }

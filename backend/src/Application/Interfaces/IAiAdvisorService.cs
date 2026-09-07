@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AssignmentSystem.Application.Interfaces;
 
-public record RecommendedSubjectDto(Guid SubjectId, string Name, string Code, string Reason);
+public record RecommendedSubjectDto(Guid SubjectId, string Name, string Code, string Reason, string Syllabus);
 
 public interface IAiAdvisorService
 {

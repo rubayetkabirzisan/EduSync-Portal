@@ -6,7 +6,19 @@ import { Scholarship, ScholarshipApplication, CreateScholarshipRequest, UpdateSc
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/toast-context";
-import { Banknote, Plus, X, FileText, Check, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Banknote, Plus, X, FileText, Clock, CheckCircle2, XCircle } from "lucide-react";
+
+async function getAdminScholarshipData() {
+  const [scholarshipsResponse, applicationsResponse] = await Promise.all([
+    api.get<Scholarship[]>("/scholarships"),
+    api.get<ScholarshipApplication[]>("/scholarships/applications"),
+  ]);
+
+  return {
+    scholarships: scholarshipsResponse.data,
+    applications: applicationsResponse.data,
+  };
+}
 
 export default function AdminScholarshipsPage() {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
@@ -28,18 +40,33 @@ export default function AdminScholarshipsPage() {
   const { addToast } = useToast();
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    let cancelled = false;
+
+    getAdminScholarshipData()
+      .then((data) => {
+        if (cancelled) return;
+        setScholarships(data.scholarships);
+        setApplications(data.applications);
+      })
+      .catch((err) => {
+        console.error("Failed to load scholarships data:", err);
+        addToast("Failed to load scholarship data", "error");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addToast]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [scholRes, appRes] = await Promise.all([
-        api.get<Scholarship[]>("/scholarships"),
-        api.get<ScholarshipApplication[]>("/scholarships/applications"),
-      ]);
-      setScholarships(scholRes.data || []);
-      setApplications(appRes.data || []);
+      const data = await getAdminScholarshipData();
+      setScholarships(data.scholarships);
+      setApplications(data.applications);
     } catch (err) {
       console.error("Failed to load scholarships data:", err);
     } finally {
@@ -57,7 +84,7 @@ export default function AdminScholarshipsPage() {
       addToast("Scholarship program created!", "success");
       setIsProgramModalOpen(false);
       setNewProgram({ name: "", description: "", amount: 1000, deadline: new Date().toISOString().split("T")[0] });
-      fetchData();
+      await fetchData();
     } catch (err) {
       console.error(err);
       addToast("Failed to create scholarship program", "error");
@@ -71,11 +98,11 @@ export default function AdminScholarshipsPage() {
         status,
         adminFeedback: feedback,
       };
-      await api.put(`/scholarships/applications/${selectedApp.id}`, payload);
+      await api.put(`/scholarships/applications/${selectedApp.id}/status`, payload);
       addToast(`Application status updated to ${status}!`, "success");
       setSelectedApp(null);
       setFeedback("");
-      fetchData();
+      await fetchData();
     } catch (err) {
       console.error(err);
       addToast("Failed to update status", "error");
@@ -293,7 +320,7 @@ export default function AdminScholarshipsPage() {
               </div>
               
               <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Applicant's Statement</p>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Applicant&apos;s Statement</p>
                 <p className="text-sm text-slate-600 dark:text-slate-400">{selectedApp.reason}</p>
               </div>
 
@@ -320,8 +347,9 @@ export default function AdminScholarshipsPage() {
                 </Button>
                 <Button 
                   type="button" 
+                  variant="danger"
                   onClick={() => handleUpdateStatus("Rejected")}
-                  className="bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border-none w-full text-xs"
+                  className="w-full text-xs"
                 >
                   Reject
                 </Button>

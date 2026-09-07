@@ -45,9 +45,8 @@ export function ChatbotWidget() {
       }
       
       setMessages(prev => [...prev, { role: "bot", text: botResponse }]);
-    } catch (err) {
-      console.error(err);
-      setMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting to my brain right now." }]);
+    } catch {
+      setMessages(prev => [...prev, { role: "bot", text: "I couldn't reach the assistant service. Please try again in a moment." }]);
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +85,7 @@ export function ChatbotWidget() {
               <h3 className="font-bold text-sm flex items-center gap-1">
                 EduSync Assistant <Sparkles className="w-3 h-3 text-amber-300" />
               </h3>
-              <p className="text-[10px] text-indigo-100 font-medium">Online</p>
+              <p className="text-[10px] text-indigo-100 font-medium">Portal help</p>
             </div>
           </div>
           <div className="flex items-center gap-1">

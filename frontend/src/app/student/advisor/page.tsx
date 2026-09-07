@@ -1,24 +1,29 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import api from "@/lib/api";
 import { RecommendedSubjectDto } from "@/lib/types";
 import { Bot, Sparkles, BookOpen, ChevronRight, Loader2, BrainCircuit } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 
 export default function StudentAiAdvisorPage() {
   const [recommendations, setRecommendations] = useState<RecommendedSubjectDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [selectedRecommendation, setSelectedRecommendation] = useState<RecommendedSubjectDto | null>(null);
 
   const fetchRecommendations = async () => {
     try {
       setLoading(true);
       setHasRequested(true);
-      const res = await api.get<RecommendedSubjectDto[]>("/aidadvisor/recommendations");
+      setErrorMessage("");
+      const res = await api.get<RecommendedSubjectDto[]>("/AiAdvisor/recommendations");
       setRecommendations(res.data || []);
-    } catch (err) {
-      console.error("Failed to load recommendations:", err);
+    } catch {
+      setRecommendations([]);
+      setErrorMessage("Recommendations could not be loaded. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -35,7 +40,7 @@ export default function StudentAiAdvisorPage() {
             AI Course Advisor <Sparkles className="w-4 h-4 text-violet-500" />
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Get personalized subject recommendations based on your performance and interests.
+            Get subject recommendations based on your recorded performance and curriculum.
           </p>
         </div>
       </div>
@@ -50,7 +55,7 @@ export default function StudentAiAdvisorPage() {
           </p>
           <Button 
             onClick={fetchRecommendations}
-            className="bg-white text-violet-700 hover:bg-violet-50 hover:text-violet-800 font-bold px-8 py-3 rounded-full shadow-lg shadow-violet-900/20 border-none text-base cursor-pointer transform hover:scale-105 transition-all"
+            className="!bg-white !text-violet-700 hover:!bg-violet-50 hover:!text-violet-800 font-bold px-8 py-3 rounded-full shadow-lg shadow-violet-900/20 border-none text-base cursor-pointer transform hover:scale-105 transition-all"
           >
             Generate My Plan
           </Button>
@@ -75,7 +80,14 @@ export default function StudentAiAdvisorPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recommendations.length === 0 ? (
+            {errorMessage ? (
+              <div className="col-span-full p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-rose-200 dark:border-rose-900/60">
+                <p className="mb-4 text-sm font-medium text-rose-600 dark:text-rose-400">{errorMessage}</p>
+                <Button variant="outline" size="sm" onClick={fetchRecommendations}>
+                  Try Again
+                </Button>
+              </div>
+            ) : recommendations.length === 0 ? (
               <div className="col-span-full p-8 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
                 No recommendations could be generated at this time.
               </div>
@@ -101,14 +113,18 @@ export default function StudentAiAdvisorPage() {
                   
                   <div className="mt-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80">
                     <p className="text-xs font-semibold text-slate-900 dark:text-slate-200 mb-1 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-violet-500" /> AI Rationale
+                      <Sparkles className="w-3.5 h-3.5 text-violet-500" /> Recommendation Rationale
                     </p>
                     <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                       {rec.reason}
                     </p>
                   </div>
                   
-                  <button className="mt-5 w-full flex items-center justify-center space-x-2 py-2 text-sm font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRecommendation(rec)}
+                    className="mt-5 w-full flex items-center justify-center space-x-2 py-2 text-sm font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors cursor-pointer"
+                  >
                     <span>View Syllabus</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -116,6 +132,23 @@ export default function StudentAiAdvisorPage() {
               ))
             )}
           </div>
+
+          <Modal
+            isOpen={selectedRecommendation !== null}
+            onClose={() => setSelectedRecommendation(null)}
+            title={selectedRecommendation ? `${selectedRecommendation.name} Syllabus` : "Subject Syllabus"}
+            subtitle={selectedRecommendation?.code}
+          >
+            {selectedRecommendation?.syllabus?.trim() ? (
+              <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm leading-7 text-slate-700 dark:text-slate-200">
+                {selectedRecommendation.syllabus}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/30 p-5 text-sm text-amber-800 dark:text-amber-300">
+                A syllabus has not been published for this subject yet. An administrator can add it from Admin Portal &gt; Subjects &gt; Edit.
+              </div>
+            )}
+          </Modal>
         </div>
       )}
     </div>

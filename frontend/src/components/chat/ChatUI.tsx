@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import api from "@/lib/api";
 import { ChatMessage, PagedResponse } from "@/lib/types";
@@ -8,13 +8,17 @@ import { useAuth } from "@/context/auth-context";
 import { Send, MessageSquare, Loader2, Users, Shield, GraduationCap, BookOpen } from "lucide-react";
 import { Badge } from "../ui/Badge";
 
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:5080/api";
+const signalRBaseUrl = apiBaseUrl.replace(/\/api\/?$/, "");
+
 export function ChatUI() {
   const { user, token } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<"connecting" | "live" | "offline">("connecting");
+  const [errorMessage, setErrorMessage] = useState("");
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -24,19 +28,32 @@ export function ChatUI() {
     }
   };
 
+  const fetchMessages = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await api.get<PagedResponse<ChatMessage>>("/CommunityChat?pageSize=50");
+      const chronological = [...(res.data.items || [])].reverse();
+      setMessages(chronological);
+      setErrorMessage("");
+    } catch {
+      setErrorMessage("Chat history could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Initial fetch and SignalR connection
   useEffect(() => {
-    fetchMessages();
+    let disposed = false;
+    const historyTimer = window.setTimeout(() => void fetchMessages(), 0);
 
     if (token) {
       const newConnection = new signalR.HubConnectionBuilder()
-        .withUrl("http://127.0.0.1:5080/hubs/chat", {
-          accessTokenFactory: () => token,
-          // Since it's local development, avoid cross-origin negotiation issues by forcing WebSockets
-          skipNegotiation: true,
-          transport: signalR.HttpTransportType.WebSockets
+        .withUrl(`${signalRBaseUrl}/chatHub`, {
+          accessTokenFactory: () => token
         })
-        .withAutomaticReconnect()
+        .withAutomaticReconnect([0, 2000, 10_000, 30_000])
+        .configureLogging(signalR.LogLevel.None)
         .build();
 
       newConnection.on("ReceiveMessage", (message: ChatMessage) => {
@@ -47,53 +64,74 @@ export function ChatUI() {
         });
       });
 
-      newConnection.start()
-        .then(() => console.log("Connected to SignalR Community Chat"))
-        .catch(err => console.error("SignalR Connection Error: ", err));
+      newConnection.onreconnecting(() => {
+        if (!disposed) setConnectionStatus("connecting");
+      });
+      newConnection.onreconnected(() => {
+        if (!disposed) {
+          setConnectionStatus("live");
+          setErrorMessage("");
+        }
+      });
+      newConnection.onclose(() => {
+        if (!disposed) setConnectionStatus("offline");
+      });
 
-      setConnection(newConnection);
+      // React Strict Mode immediately mounts, cleans up, and mounts effects again
+      // in development. Starting on the next task prevents the first cleanup from
+      // stopping SignalR while it is still negotiating.
+      const connectionTimer = window.setTimeout(() => {
+        if (disposed) return;
+
+        void newConnection.start()
+          .then(() => {
+            if (!disposed) {
+              setConnectionStatus("live");
+              setErrorMessage("");
+            }
+          })
+          .catch(() => {
+            if (!disposed) {
+              setConnectionStatus("offline");
+              setErrorMessage("Real-time updates are temporarily unavailable. Messages can still be sent.");
+            }
+          });
+      }, 0);
 
       return () => {
-        if (newConnection) {
-          newConnection.stop();
+        disposed = true;
+        window.clearTimeout(historyTimer);
+        window.clearTimeout(connectionTimer);
+        if (newConnection.state !== signalR.HubConnectionState.Disconnected) {
+          void newConnection.stop().catch(() => undefined);
         }
       };
     }
-  }, [token]);
+
+    return () => window.clearTimeout(historyTimer);
+  }, [fetchMessages, token]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const fetchMessages = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get<PagedResponse<ChatMessage>>("/CommunityChat?pageSize=50");
-      // The API returns most recent first, we need chronological for chat
-      const chronological = (res.data.items || []).reverse();
-      setMessages(chronological);
-    } catch (err) {
-      console.error("Failed to load chat history:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || sending) return;
+    const messageContent = input.trim();
 
     try {
       setSending(true);
-      const messageContent = input.trim();
       setInput(""); // optimistic clear
       
-      // Sending via API endpoint (which then broadcasts via SignalR)
-      await api.post("/CommunityChat/send", { content: messageContent });
-    } catch (err) {
-      console.error("Failed to send message", err);
-      // Restore input if failed
-      setInput(input);
+      const response = await api.post<ChatMessage>("/CommunityChat/send", { content: messageContent });
+      setMessages(previous => previous.some(message => message.id === response.data.id)
+        ? previous
+        : [...previous, response.data]);
+      setErrorMessage("");
+    } catch {
+      setErrorMessage("Message could not be sent. Please try again.");
+      setInput(messageContent);
     } finally {
       setSending(false);
     }
@@ -126,9 +164,21 @@ export function ChatUI() {
           </div>
           <div>
             <h2 className="font-bold text-slate-900 dark:text-white leading-tight">Community Chat</h2>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live
+            <div className={`flex items-center gap-1.5 text-xs font-semibold mt-0.5 ${
+              connectionStatus === "live"
+                ? "text-emerald-600 dark:text-emerald-400"
+                : connectionStatus === "connecting"
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-slate-500 dark:text-slate-400"
+            }`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${
+                connectionStatus === "live"
+                  ? "bg-emerald-500 animate-pulse"
+                  : connectionStatus === "connecting"
+                    ? "bg-amber-500 animate-pulse"
+                    : "bg-slate-500"
+              }`} />
+              {connectionStatus === "live" ? "Live" : connectionStatus === "connecting" ? "Connecting" : "Offline"}
             </div>
           </div>
         </div>
@@ -206,6 +256,9 @@ export function ChatUI() {
             {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
         </form>
+        {errorMessage && (
+          <p className="mt-2 px-1 text-xs text-rose-600 dark:text-rose-400">{errorMessage}</p>
+        )}
       </div>
     </div>
   );

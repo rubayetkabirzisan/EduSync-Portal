@@ -1,105 +1,119 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import api from "@/lib/api";
-import { TeachingAssignment, PagedResponse, MarkAttendanceRequest } from "@/lib/types";
-import { Badge } from "@/components/ui/Badge";
+import { AttendanceRosterStudent, AttendanceStatus, TeachingAssignment, MarkAttendanceRequest } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/toast-context";
-import { Clock, CheckCircle2, XCircle, AlertCircle, Check, Users, Save } from "lucide-react";
-
-interface Student {
-  id: string;
-  name: string;
-  email: string;
-}
+import { Clock, CheckCircle2, XCircle, AlertCircle, Users, Save } from "lucide-react";
 
 export default function TeacherAttendancePage() {
   const [allotments, setAllotments] = useState<TeachingAssignment[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>("");
-  const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
+  const [date, setDate] = useState<string>(() => {
+    const today = new Date();
+    const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60_000);
+    return localToday.toISOString().split("T")[0];
+  });
   
-  const [students, setStudents] = useState<Student[]>([]);
-  const [attendanceState, setAttendanceState] = useState<Record<string, string>>({});
+  const [students, setStudents] = useState<AttendanceRosterStudent[]>([]);
+  const [attendanceState, setAttendanceState] = useState<Record<string, AttendanceStatus>>({});
   
   const [loading, setLoading] = useState(true);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const { addToast } = useToast();
 
-  useEffect(() => {
-    fetchAllotments();
-  }, []);
-
-  const fetchAllotments = async () => {
+  const fetchAllotments = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get<TeachingAssignment[]>("/assignments/my-allotments");
       setAllotments(res.data || []);
       if (res.data && res.data.length > 0) {
         setSelectedClassId(res.data[0].classId);
+        setSelectedSubjectId(res.data[0].subjectId);
       }
     } catch (err) {
       console.error("Failed to load allotments:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => {
-    if (selectedClassId) {
-      fetchStudents();
-    }
-  }, [selectedClassId]);
-
-  const fetchStudents = async () => {
+  const fetchRoster = useCallback(async () => {
     try {
       setStudentsLoading(true);
-      const res = await api.get<PagedResponse<Student>>(`/admin/users?role=Student&pageSize=500`);
-      // Optionally filter by classId if backend user has classId, otherwise just mock it by showing all fetched students for this demo
-      setStudents(res.data.items || []);
-      
-      // Initialize state to "Present" by default
-      const defaultState: Record<string, string> = {};
-      (res.data.items || []).forEach(s => {
-        defaultState[s.id] = "Present";
+      const params = new URLSearchParams({
+        classId: selectedClassId,
+        subjectId: selectedSubjectId,
+        date
       });
-      setAttendanceState(defaultState);
+      const res = await api.get<AttendanceRosterStudent[]>(`/Attendance/roster?${params}`);
+      const roster = Array.isArray(res.data) ? res.data : [];
+      setStudents(roster);
+      
+      const loadedState: Record<string, AttendanceStatus> = {};
+      roster.forEach(student => {
+        loadedState[student.id] = student.status || "Present";
+      });
+      setAttendanceState(loadedState);
     } catch (err) {
       console.error("Failed to fetch students:", err);
       addToast("Failed to fetch students list", "error");
     } finally {
       setStudentsLoading(false);
     }
-  };
+  }, [addToast, date, selectedClassId, selectedSubjectId]);
 
-  const handleStatusChange = (studentId: string, status: string) => {
+  useEffect(() => {
+    const loadTimer = window.setTimeout(() => void fetchAllotments(), 0);
+    return () => window.clearTimeout(loadTimer);
+  }, [fetchAllotments]);
+
+  useEffect(() => {
+    if (!selectedClassId || !selectedSubjectId || !date) return;
+    const loadTimer = window.setTimeout(() => void fetchRoster(), 0);
+    return () => window.clearTimeout(loadTimer);
+  }, [date, fetchRoster, selectedClassId, selectedSubjectId]);
+
+  const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendanceState(prev => ({ ...prev, [studentId]: status }));
   };
 
   const handleSaveAttendance = async () => {
-    if (!selectedClassId || !date) return;
+    if (!selectedClassId || !selectedSubjectId || !date) return;
     
     try {
       setSaving(true);
-      const promises = students.map(student => {
-        const payload: MarkAttendanceRequest = {
+      const payload: MarkAttendanceRequest = {
+        classId: selectedClassId,
+        subjectId: selectedSubjectId,
+        date,
+        records: students.map(student => ({
           studentId: student.id,
-          classId: selectedClassId,
-          date: new Date(date).toISOString(),
-          status: attendanceState[student.id] as any
-        };
-        return api.post("/Attendance", payload);
-      });
-      
-      await Promise.all(promises);
+          status: attendanceState[student.id] || "Present",
+          remarks: ""
+        }))
+      };
+
+      await api.post("/Attendance", payload);
       addToast("Attendance records saved successfully!", "success");
+      await fetchRoster();
     } catch (err) {
       console.error(err);
       addToast("Failed to save some attendance records", "error");
     } finally {
       setSaving(false);
     }
+  };
+
+  const classAllotments = allotments.filter(allotment => allotment.classId === selectedClassId);
+
+  const handleClassChange = (classId: string) => {
+    setSelectedClassId(classId);
+    const firstSubject = allotments.find(allotment => allotment.classId === classId);
+    setSelectedSubjectId(firstSubject?.subjectId || "");
   };
 
   return (
@@ -118,14 +132,14 @@ export default function TeacherAttendancePage() {
         </div>
       </div>
 
-      <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col md:flex-row gap-4 md:items-end">
+      <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 grid grid-cols-1 md:grid-cols-3 gap-4 md:items-end">
         <div className="flex-1">
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
             Select Class
           </label>
           <select
             value={selectedClassId}
-            onChange={(e) => setSelectedClassId(e.target.value)}
+            onChange={(e) => handleClassChange(e.target.value)}
             disabled={loading}
             className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer disabled:opacity-50"
           >
@@ -137,6 +151,25 @@ export default function TeacherAttendancePage() {
               // Deduplicate classes
               Array.from(new Map(allotments.map(a => [a.classId, a])).values()).map(a => (
                 <option key={a.classId} value={a.classId}>{a.className}</option>
+              ))
+            )}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Select Subject
+          </label>
+          <select
+            value={selectedSubjectId}
+            onChange={(e) => setSelectedSubjectId(e.target.value)}
+            disabled={loading || !selectedClassId}
+            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer disabled:opacity-50"
+          >
+            {classAllotments.length === 0 ? (
+              <option value="">No subjects assigned</option>
+            ) : (
+              classAllotments.map(allotment => (
+                <option key={allotment.id} value={allotment.subjectId}>{allotment.subjectName}</option>
               ))
             )}
           </select>

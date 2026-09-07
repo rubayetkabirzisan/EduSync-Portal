@@ -1,5 +1,6 @@
 using AssignmentSystem.Application.DTOs.Attendance;
 using AssignmentSystem.Application.Interfaces;
+using AssignmentSystem.Api.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -38,6 +39,44 @@ public class AttendanceController : ControllerBase
         return Ok(attendances);
     }
 
+    [HttpGet("me")]
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> GetMine(CancellationToken cancellationToken)
+    {
+        var attendances = await _attendanceService.GetByStudentAsync(User.GetUserId(), cancellationToken);
+        return Ok(attendances);
+    }
+
+    [HttpGet("roster")]
+    [Authorize(Roles = "Admin,Teacher")]
+    public async Task<IActionResult> GetRoster(
+        [FromQuery] Guid classId,
+        [FromQuery] Guid subjectId,
+        [FromQuery] DateTime date,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var isAdmin = User.GetUserRole() == "Admin";
+            var students = await _attendanceService.GetRosterAsync(
+                classId,
+                subjectId,
+                date,
+                User.GetUserId(),
+                isAdmin,
+                cancellationToken);
+            return Ok(students);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (System.Collections.Generic.KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
     [HttpGet("subject/{subjectId:guid}")]
     [Authorize(Roles = "Admin,Teacher")]
     public async Task<IActionResult> GetBySubject(Guid subjectId, [FromQuery] DateTime date, CancellationToken cancellationToken)
@@ -52,8 +91,21 @@ public class AttendanceController : ControllerBase
     {
         try
         {
-            await _attendanceService.MarkAttendanceAsync(dto, cancellationToken);
+            var isAdmin = User.GetUserRole() == "Admin";
+            await _attendanceService.MarkAttendanceAsync(
+                dto,
+                User.GetUserId(),
+                isAdmin,
+                cancellationToken);
             return Ok(new { message = "Attendance marked successfully." });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (System.Collections.Generic.KeyNotFoundException ex)
         {

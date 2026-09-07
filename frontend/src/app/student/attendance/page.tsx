@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import api from "@/lib/api";
-import { AttendanceRecord, PagedResponse } from "@/lib/types";
+import { AttendanceRecord } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Clock, CheckCircle2, XCircle, AlertCircle, Info, Calendar as CalendarIcon } from "lucide-react";
 
@@ -10,24 +10,25 @@ export default function StudentAttendancePage() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchAttendance();
-  }, []);
-
-  const fetchAttendance = async () => {
+  const fetchAttendance = useCallback(async () => {
     try {
       setLoading(true);
-      // Backend automatically filters by the authenticated student
-      const res = await api.get<PagedResponse<AttendanceRecord>>("/attendance/student");
+      const res = await api.get<AttendanceRecord[]>("/Attendance/me");
       // Sort by date descending
-      const sorted = (res.data.items || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const sorted = (Array.isArray(res.data) ? res.data : [])
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setRecords(sorted);
     } catch (err) {
       console.error("Failed to load attendance:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const loadTimer = window.setTimeout(() => void fetchAttendance(), 0);
+    return () => window.clearTimeout(loadTimer);
+  }, [fetchAttendance]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -113,9 +114,9 @@ export default function StudentAttendancePage() {
                       {new Date(record.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </h3>
                     <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      Class: <span className="text-indigo-600 dark:text-indigo-400">{record.className}</span>
+                      {record.subjectName}
                     </p>
-                    <p className="text-[10px] text-slate-400 mt-1">Recorded by: {record.recordedByTeacherName}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">{record.className}</p>
                   </div>
                 </div>
                 <div>

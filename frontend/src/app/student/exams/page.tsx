@@ -2,31 +2,32 @@
 
 import React, { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { Exam, PagedResponse } from "@/lib/types";
+import { Exam } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
-import { CalendarDays, Calendar as CalendarIcon, Clock, Users, BookOpen, Info, AlertCircle } from "lucide-react";
+import { CalendarDays, Calendar as CalendarIcon, Clock, BookOpen, Info, AlertCircle } from "lucide-react";
 
 export default function StudentExamsPage() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchExams();
-  }, []);
-
-  const fetchExams = async () => {
+  async function fetchExams() {
     try {
       setLoading(true);
-      const res = await api.get<PagedResponse<Exam>>("/exams?pageSize=50");
+      const res = await api.get<Exam[]>("/exams");
       // The backend StudentController / ExamsController (if modified for students) should only return their exams
       // Or we filter here just in case (assuming the API does the heavy lifting).
-      setExams(res.data.items || []);
+      setExams(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Failed to load exams:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void fetchExams(), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const getStatus = (startTime: string, durationMinutes: number) => {
     const start = new Date(startTime);

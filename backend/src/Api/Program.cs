@@ -96,6 +96,21 @@ try
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromMinutes(1)
             };
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+                    var path = context.HttpContext.Request.Path;
+                    if (!string.IsNullOrEmpty(accessToken) &&
+                        (path.StartsWithSegments("/chatHub") || path.StartsWithSegments("/notificationHub")))
+                    {
+                        context.Token = accessToken;
+                    }
+
+                    return Task.CompletedTask;
+                }
+            };
         });
 
     builder.Services.AddAuthorization();
@@ -178,6 +193,29 @@ try
         catch (Exception ex)
         {
             Log.Warning(ex, "Migration encountered an exception; attempting to seed and continue...");
+        }
+
+        // Some existing Supabase databases predate a complete EF migration history.
+        // Keep the exam schema compatible even when an older, already-created table
+        // prevents the normal migration chain from reaching the latest migration.
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Exams\" ADD COLUMN IF NOT EXISTS \"MaxMarks\" integer NOT NULL DEFAULT 100;");
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Subjects\" ADD COLUMN IF NOT EXISTS \"Syllabus\" character varying(10000) NOT NULL DEFAULT '';");
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Attendances\" ADD COLUMN IF NOT EXISTS \"Status\" character varying(20); " +
+                "UPDATE \"Attendances\" SET \"Status\" = CASE WHEN \"IsPresent\" THEN 'Present' ELSE 'Absent' END " +
+                "WHERE \"Status\" IS NULL OR \"Status\" = ''; " +
+                "ALTER TABLE \"Attendances\" ALTER COLUMN \"Status\" SET DEFAULT 'Present'; " +
+                "ALTER TABLE \"Attendances\" ALTER COLUMN \"Status\" SET NOT NULL;");
+            await db.Subjects.Select(subject => subject.Syllabus).FirstOrDefaultAsync();
+            Log.Information("Database compatibility schema checks completed.");
+        }
+        catch (Exception schemaEx)
+        {
+            Log.Warning(schemaEx, "Could not complete database compatibility schema checks.");
         }
 
         try

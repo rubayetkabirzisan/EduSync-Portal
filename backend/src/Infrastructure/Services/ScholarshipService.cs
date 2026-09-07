@@ -103,6 +103,17 @@ public class ScholarshipService : IScholarshipService
         return applications.Select(MapToAppDto);
     }
 
+    public async Task<IEnumerable<ScholarshipApplicationDto>> GetAllApplicationsAsync(CancellationToken cancellationToken = default)
+    {
+        var applications = await _context.ScholarshipApplications
+            .Include(a => a.Scholarship)
+            .Include(a => a.Student)
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        return applications.Select(MapToAppDto);
+    }
+
     public async Task<IEnumerable<ScholarshipApplicationDto>> GetMyApplicationsAsync(Guid studentId, CancellationToken cancellationToken = default)
     {
         var applications = await _context.ScholarshipApplications

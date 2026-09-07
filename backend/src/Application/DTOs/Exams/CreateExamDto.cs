@@ -8,6 +8,7 @@ public record CreateExamDto
     public Guid ClassId { get; init; }
     public Guid SubjectId { get; init; }
     public DateTime StartTime { get; init; }
-    public DateTime EndTime { get; init; }
-    public string RoomNumber { get; init; } = string.Empty;
+    public int DurationMinutes { get; init; }
+    public int MaxMarks { get; init; }
+    public string RoomName { get; init; } = string.Empty;
 }

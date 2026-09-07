@@ -62,9 +62,10 @@ public class ChatHub : Hub
             id = chatMessage.Id,
             senderId = user.Id,
             senderName = user.Name,
+            senderRole = user.Role.ToString(),
             content = chatMessage.Content,
             channel = chatMessage.Channel,
-            sentAt = chatMessage.SentAt
+            timestamp = chatMessage.SentAt
         });
     }
 

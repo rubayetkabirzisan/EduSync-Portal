@@ -13,6 +13,7 @@ public interface IScholarshipService
     Task<ScholarshipDto> CreateAsync(CreateScholarshipDto dto, CancellationToken cancellationToken = default);
     
     Task<ScholarshipApplicationDto> ApplyAsync(ApplyScholarshipDto dto, Guid studentId, CancellationToken cancellationToken = default);
+    Task<IEnumerable<ScholarshipApplicationDto>> GetAllApplicationsAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<ScholarshipApplicationDto>> GetApplicationsForScholarshipAsync(Guid scholarshipId, CancellationToken cancellationToken = default);
     Task<IEnumerable<ScholarshipApplicationDto>> GetMyApplicationsAsync(Guid studentId, CancellationToken cancellationToken = default);
     Task UpdateApplicationStatusAsync(Guid applicationId, UpdateScholarshipApplicationDto dto, CancellationToken cancellationToken = default);

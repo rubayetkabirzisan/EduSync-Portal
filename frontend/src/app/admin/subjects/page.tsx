@@ -31,6 +31,7 @@ export default function AdminSubjectsPage() {
   // Form states
   const [formName, setFormName] = useState("");
   const [formCode, setFormCode] = useState("");
+  const [formSyllabus, setFormSyllabus] = useState("");
 
   const fetchSubjects = useCallback(async () => {
     setIsLoading(true);
@@ -50,12 +51,14 @@ export default function AdminSubjectsPage() {
   }, [page, searchTerm, error]);
 
   useEffect(() => {
-    fetchSubjects();
+    const timer = window.setTimeout(() => void fetchSubjects(), 0);
+    return () => window.clearTimeout(timer);
   }, [fetchSubjects]);
 
   const handleOpenAdd = () => {
     setFormName("");
     setFormCode("");
+    setFormSyllabus("");
     setIsAddModalOpen(true);
   };
 
@@ -63,6 +66,7 @@ export default function AdminSubjectsPage() {
     setSelectedSubject(s);
     setFormName(s.name);
     setFormCode(s.code);
+    setFormSyllabus(s.syllabus || "");
     setIsEditModalOpen(true);
   };
 
@@ -78,6 +82,7 @@ export default function AdminSubjectsPage() {
       await api.post("/admin/subjects", {
         name: formName,
         code: formCode.toUpperCase(),
+        syllabus: formSyllabus.trim(),
       });
       success(`Subject "${formName}" added successfully.`);
       setIsAddModalOpen(false);
@@ -98,6 +103,7 @@ export default function AdminSubjectsPage() {
       await api.put(`/admin/subjects/${selectedSubject.id}`, {
         name: formName,
         code: formCode.toUpperCase(),
+        syllabus: formSyllabus.trim(),
       });
       success(`Subject updated successfully.`);
       setIsEditModalOpen(false);
@@ -262,6 +268,19 @@ export default function AdminSubjectsPage() {
             onChange={(e) => setFormCode(e.target.value)}
             required
           />
+          <div className="space-y-1.5">
+            <label htmlFor="subject-syllabus-input" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Syllabus
+            </label>
+            <textarea
+              id="subject-syllabus-input"
+              rows={7}
+              placeholder="Enter topics, learning outcomes, and course outline..."
+              value={formSyllabus}
+              onChange={(e) => setFormSyllabus(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
 
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)}>
@@ -294,6 +313,19 @@ export default function AdminSubjectsPage() {
             onChange={(e) => setFormCode(e.target.value)}
             required
           />
+          <div className="space-y-1.5">
+            <label htmlFor="edit-subject-syllabus-input" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Syllabus
+            </label>
+            <textarea
+              id="edit-subject-syllabus-input"
+              rows={7}
+              placeholder="Enter topics, learning outcomes, and course outline..."
+              value={formSyllabus}
+              onChange={(e) => setFormSyllabus(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
 
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>

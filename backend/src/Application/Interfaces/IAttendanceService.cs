@@ -10,5 +10,16 @@ public interface IAttendanceService
 {
     Task<IEnumerable<AttendanceDto>> GetByStudentAsync(Guid studentId, CancellationToken cancellationToken = default);
     Task<IEnumerable<AttendanceDto>> GetBySubjectAsync(Guid subjectId, DateTime date, CancellationToken cancellationToken = default);
-    Task MarkAttendanceAsync(CreateAttendanceDto dto, CancellationToken cancellationToken = default);
+    Task<IEnumerable<AttendanceRosterStudentDto>> GetRosterAsync(
+        Guid classId,
+        Guid subjectId,
+        DateTime date,
+        Guid actorUserId,
+        bool isAdmin,
+        CancellationToken cancellationToken = default);
+    Task MarkAttendanceAsync(
+        CreateAttendanceDto dto,
+        Guid actorUserId,
+        bool isAdmin,
+        CancellationToken cancellationToken = default);
 }

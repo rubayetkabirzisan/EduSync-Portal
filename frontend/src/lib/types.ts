@@ -72,12 +72,14 @@ export interface Subject {
   id: string;
   name: string;
   code: string;
+  syllabus: string;
   createdAt: string;
 }
 
 export interface CreateSubjectRequest {
   name: string;
   code: string;
+  syllabus?: string;
 }
 
 // ── Teaching Assignments ────────────────────────────────────────────
@@ -291,21 +293,34 @@ export interface AppNotification {
 export interface AttendanceRecord {
   id: string;
   studentId: string;
-  studentName?: string;
-  classId: string;
-  className?: string;
+  studentName: string;
+  className: string;
+  subjectId: string;
+  subjectName: string;
   date: string;
-  status: "Present" | "Absent" | "Late" | "Excused";
-  recordedByTeacherId: string;
-  recordedByTeacherName?: string;
-  createdAt: string;
+  status: AttendanceStatus;
+  isPresent: boolean;
+  remarks: string;
+}
+
+export type AttendanceStatus = "Present" | "Absent" | "Late" | "Excused";
+
+export interface AttendanceRosterStudent {
+  id: string;
+  name: string;
+  email: string;
+  status: AttendanceStatus | null;
 }
 
 export interface MarkAttendanceRequest {
-  studentId: string;
   classId: string;
+  subjectId: string;
   date: string;
-  status: "Present" | "Absent" | "Late" | "Excused";
+  records: Array<{
+    studentId: string;
+    status: AttendanceStatus;
+    remarks: string;
+  }>;
 }
 
 // ── Exams ───────────────────────────────────────────────────────────
@@ -339,6 +354,7 @@ export interface RecommendedSubjectDto {
   name: string;
   code: string;
   reason: string;
+  syllabus: string;
 }
 
 // ── Community Chat ──────────────────────────────────────────────────

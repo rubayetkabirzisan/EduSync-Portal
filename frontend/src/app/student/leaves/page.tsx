@@ -2,16 +2,23 @@
 
 import React, { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { LeaveApplication, CreateLeaveRequest, PagedResponse } from "@/lib/types";
+import { LeaveApplication, CreateLeaveRequest } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/toast-context";
-import { CalendarDays, Plus, Info, X, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { CalendarDays, Pencil, Plus, Info, X, Clock, CheckCircle2, XCircle } from "lucide-react";
+
+async function getStudentLeaves() {
+  const response = await api.get<LeaveApplication[]>("/leaves/my-leaves");
+  return response.data;
+}
 
 export default function StudentLeavesPage() {
   const [leaves, setLeaves] = useState<LeaveApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingLeave, setEditingLeave] = useState<LeaveApplication | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { addToast } = useToast();
 
   const [newLeave, setNewLeave] = useState<CreateLeaveRequest>({
@@ -21,14 +28,29 @@ export default function StudentLeavesPage() {
   });
 
   useEffect(() => {
-    fetchLeaves();
-  }, []);
+    let cancelled = false;
+
+    getStudentLeaves()
+      .then((data) => {
+        if (!cancelled) setLeaves(data);
+      })
+      .catch((err) => {
+        console.error("Failed to load leaves:", err);
+        addToast("Failed to load leave applications", "error");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addToast]);
 
   const fetchLeaves = async () => {
     try {
       setLoading(true);
-      const res = await api.get<PagedResponse<LeaveApplication>>("/leaves?pageSize=50");
-      setLeaves(res.data.items || []);
+      setLeaves(await getStudentLeaves());
     } catch (err) {
       console.error("Failed to load leaves:", err);
     } finally {
@@ -36,21 +58,57 @@ export default function StudentLeavesPage() {
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    const today = new Date().toISOString().split("T")[0];
+    setEditingLeave(null);
+    setNewLeave({ reason: "", startDate: today, endDate: today });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (leave: LeaveApplication) => {
+    setEditingLeave(leave);
+    setNewLeave({
+      reason: leave.reason,
+      startDate: leave.startDate.slice(0, 10),
+      endDate: leave.endDate.slice(0, 10),
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    if (isSubmitting) return;
+    setIsModalOpen(false);
+    setEditingLeave(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
     try {
-      await api.post("/leaves", {
+      const payload = {
         reason: newLeave.reason,
         startDate: new Date(newLeave.startDate).toISOString(),
         endDate: new Date(newLeave.endDate).toISOString(),
-      });
-      addToast("Leave application submitted!", "success");
+      };
+
+      if (editingLeave) {
+        await api.put(`/leaves/${editingLeave.id}`, payload);
+        addToast("Leave application updated!", "success");
+      } else {
+        await api.post("/leaves", payload);
+        addToast("Leave application submitted!", "success");
+      }
+
       setIsModalOpen(false);
+      setEditingLeave(null);
       setNewLeave({ reason: "", startDate: new Date().toISOString().split("T")[0], endDate: new Date().toISOString().split("T")[0] });
-      fetchLeaves();
+      await fetchLeaves();
     } catch (err) {
       console.error(err);
-      addToast("Failed to submit leave application", "error");
+      addToast(editingLeave ? "Failed to update leave application" : "Failed to submit leave application", "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -70,7 +128,7 @@ export default function StudentLeavesPage() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="gap-2 cursor-pointer bg-pink-600 hover:bg-pink-700 text-white border-none">
+        <Button onClick={openCreateModal} className="gap-2 cursor-pointer bg-pink-600 hover:bg-pink-700 text-white border-none">
           <Plus className="w-4 h-4" /> Apply for Leave
         </Button>
       </div>
@@ -81,7 +139,7 @@ export default function StudentLeavesPage() {
         ) : leaves.length === 0 ? (
           <div className="text-center py-12 text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
             <Info className="w-8 h-8 mx-auto mb-3 text-slate-400" />
-            <p>You haven't submitted any leave applications yet.</p>
+            <p>You haven&apos;t submitted any leave applications yet.</p>
           </div>
         ) : (
           leaves.map((leave) => {
@@ -103,15 +161,27 @@ export default function StudentLeavesPage() {
                       Applied on {new Date(leave.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <Badge
-                    variant={isApproved ? "success" : isRejected ? "error" : "warning"}
-                    className="flex items-center gap-1"
-                  >
-                    {isApproved && <CheckCircle2 className="w-3 h-3" />}
-                    {isRejected && <XCircle className="w-3 h-3" />}
-                    {isPending && <Clock className="w-3 h-3" />}
-                    {leave.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {isPending && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditModal(leave)}
+                        className="cursor-pointer"
+                      >
+                        <Pencil className="w-3.5 h-3.5" /> Edit
+                      </Button>
+                    )}
+                    <Badge
+                      variant={isApproved ? "success" : isRejected ? "error" : "warning"}
+                      className="flex items-center gap-1"
+                    >
+                      {isApproved && <CheckCircle2 className="w-3 h-3" />}
+                      {isRejected && <XCircle className="w-3 h-3" />}
+                      {isPending && <Clock className="w-3 h-3" />}
+                      {leave.status}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 mb-3">
                   <span className="font-semibold block mb-1 text-slate-900 dark:text-slate-200">Reason:</span>
@@ -137,12 +207,14 @@ export default function StudentLeavesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="font-bold text-lg text-slate-900 dark:text-white">Apply for Leave</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white">
+                {editingLeave ? "Edit Leave Application" : "Apply for Leave"}
+              </h3>
+              <button onClick={closeModal} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleCreate} className="p-4 space-y-4">
+            <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -162,8 +234,9 @@ export default function StudentLeavesPage() {
                   </label>
                   <input
                     required
-                    type="date"
-                    value={newLeave.endDate}
+                  type="date"
+                  value={newLeave.endDate}
+                  min={newLeave.startDate}
                     onChange={(e) => setNewLeave({ ...newLeave, endDate: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-pink-500 outline-none"
                   />
@@ -184,11 +257,11 @@ export default function StudentLeavesPage() {
               </div>
               
               <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                <Button type="button" variant="outline" onClick={closeModal} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-pink-600 hover:bg-pink-700 text-white border-none">
-                  Submit Application
+                <Button type="submit" isLoading={isSubmitting} className="bg-pink-600 hover:bg-pink-700 text-white border-none">
+                  {editingLeave ? "Save Changes" : "Submit Application"}
                 </Button>
               </div>
             </form>

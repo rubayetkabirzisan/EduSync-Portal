@@ -56,6 +56,8 @@ public class LeaveApplicationService : ILeaveApplicationService
 
     public async Task<LeaveApplicationDto> CreateAsync(CreateLeaveApplicationDto dto, Guid studentId, CancellationToken cancellationToken = default)
     {
+        ValidateLeaveDetails(dto);
+
         var student = await _context.Users.FindAsync(new object[] { studentId }, cancellationToken)
             ?? throw new KeyNotFoundException("Student not found.");
 
@@ -75,6 +77,31 @@ public class LeaveApplicationService : ILeaveApplicationService
         await _context.SaveChangesAsync(cancellationToken);
 
         return await GetByIdAsync(leave.Id, cancellationToken);
+    }
+
+    public async Task UpdateOwnAsync(
+        Guid id,
+        Guid studentId,
+        CreateLeaveApplicationDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateLeaveDetails(dto);
+
+        var leave = await _context.LeaveApplications
+            .FirstOrDefaultAsync(
+                application => application.Id == id && application.StudentId == studentId,
+                cancellationToken)
+            ?? throw new KeyNotFoundException($"Leave Application with ID {id} not found.");
+
+        if (leave.Status != LeaveStatus.Pending)
+            throw new InvalidOperationException("Only pending leave applications can be edited.");
+
+        leave.Reason = dto.Reason.Trim();
+        leave.StartDate = dto.StartDate;
+        leave.EndDate = dto.EndDate;
+        leave.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateStatusAsync(Guid id, UpdateLeaveApplicationDto dto, CancellationToken cancellationToken = default)
@@ -112,4 +139,13 @@ public class LeaveApplicationService : ILeaveApplicationService
         CreatedAt = l.CreatedAt,
         UpdatedAt = l.UpdatedAt
     };
+
+    private static void ValidateLeaveDetails(CreateLeaveApplicationDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            throw new InvalidOperationException("A reason for leave is required.");
+
+        if (dto.EndDate.Date < dto.StartDate.Date)
+            throw new InvalidOperationException("The end date cannot be before the start date.");
+    }
 }

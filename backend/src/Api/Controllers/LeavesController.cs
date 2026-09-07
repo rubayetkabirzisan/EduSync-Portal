@@ -52,6 +52,15 @@ public class LeavesController : ControllerBase
         return CreatedAtAction(nameof(GetLeave), new { id = leave.Id }, leave);
     }
 
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = nameof(UserRole.Student))]
+    public async Task<IActionResult> UpdateMyLeave(Guid id, CreateLeaveApplicationDto dto, CancellationToken cancellationToken)
+    {
+        var studentId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        await _leaveService.UpdateOwnAsync(id, studentId, dto, cancellationToken);
+        return NoContent();
+    }
+
     [HttpPut("{id}/status")]
     [Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Teacher)}")]
     public async Task<IActionResult> UpdateLeaveStatus(Guid id, UpdateLeaveApplicationDto dto, CancellationToken cancellationToken)

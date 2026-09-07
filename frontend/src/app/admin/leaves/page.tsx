@@ -2,11 +2,16 @@
 
 import React, { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { LeaveApplication, PagedResponse, UpdateLeaveStatusRequest } from "@/lib/types";
+import { LeaveApplication, UpdateLeaveStatusRequest } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/toast-context";
 import { CalendarDays, Check, X, Clock, CheckCircle2, XCircle, Info, MessageSquare } from "lucide-react";
+
+async function getAllLeaves() {
+  const response = await api.get<LeaveApplication[]>("/leaves");
+  return response.data;
+}
 
 export default function AdminLeavesPage() {
   const [leaves, setLeaves] = useState<LeaveApplication[]>([]);
@@ -16,14 +21,29 @@ export default function AdminLeavesPage() {
   const { addToast } = useToast();
 
   useEffect(() => {
-    fetchLeaves();
-  }, []);
+    let cancelled = false;
+
+    getAllLeaves()
+      .then((data) => {
+        if (!cancelled) setLeaves(data);
+      })
+      .catch((err) => {
+        console.error("Failed to load leaves:", err);
+        addToast("Failed to load leave applications", "error");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addToast]);
 
   const fetchLeaves = async () => {
     try {
       setLoading(true);
-      const res = await api.get<PagedResponse<LeaveApplication>>("/admin/leaves?pageSize=50");
-      setLeaves(res.data.items || []);
+      setLeaves(await getAllLeaves());
     } catch (err) {
       console.error("Failed to load leaves:", err);
     } finally {
@@ -38,11 +58,11 @@ export default function AdminLeavesPage() {
         status,
         adminFeedback: feedback,
       };
-      await api.put(`/admin/leaves/${selectedLeave.id}`, payload);
+      await api.put(`/leaves/${selectedLeave.id}/status`, payload);
       addToast(`Leave application ${status.toLowerCase()}!`, "success");
       setSelectedLeave(null);
       setFeedback("");
-      fetchLeaves();
+      await fetchLeaves();
     } catch (err) {
       console.error(err);
       addToast("Failed to update status", "error");
@@ -173,8 +193,9 @@ export default function AdminLeavesPage() {
               <div className="pt-4 flex justify-between gap-3 border-t border-slate-100 dark:border-slate-800">
                 <Button 
                   type="button" 
+                  variant="danger"
                   onClick={() => handleUpdateStatus("Rejected")}
-                  className="bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border-none w-full"
+                  className="w-full"
                 >
                   <X className="w-4 h-4 mr-1.5" /> Reject
                 </Button>

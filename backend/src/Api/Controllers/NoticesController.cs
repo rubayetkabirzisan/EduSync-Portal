@@ -52,7 +52,7 @@ public class NoticesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Teacher)}")]
+    [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> UpdateNotice(Guid id, UpdateNoticeDto dto, CancellationToken cancellationToken)
     {
         await _noticeService.UpdateAsync(id, dto, cancellationToken);
@@ -60,7 +60,7 @@ public class NoticesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Teacher)}")]
+    [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> DeleteNotice(Guid id, CancellationToken cancellationToken)
     {
         await _noticeService.DeleteAsync(id, cancellationToken);

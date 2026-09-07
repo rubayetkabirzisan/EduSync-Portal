@@ -5,7 +5,7 @@ import api from "@/lib/api";
 import { Notice, CreateNoticeRequest } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/toast-context";
-import { BellRing, Trash2, Plus, Info, X } from "lucide-react";
+import { BellRing, Pencil, Trash2, Plus, Info, X } from "lucide-react";
 
 async function getAllNotices() {
   const response = await api.get<Notice[]>("/notices/all");
@@ -16,6 +16,8 @@ export default function AdminNoticesPage() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { addToast } = useToast();
 
   const [newNotice, setNewNotice] = useState<CreateNoticeRequest>({
@@ -56,17 +58,51 @@ export default function AdminNoticesPage() {
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingNotice(null);
+    setNewNotice({ title: "", content: "", audience: 0 });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (notice: Notice) => {
+    setEditingNotice(notice);
+    setNewNotice({
+      title: notice.title,
+      content: notice.content,
+      audience: notice.audience,
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    if (isSubmitting) return;
+    setIsModalOpen(false);
+    setEditingNotice(null);
+    setNewNotice({ title: "", content: "", audience: 0 });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
     try {
-      await api.post("/notices", newNotice);
-      addToast("Notice published successfully!", "success");
+      if (editingNotice) {
+        await api.put(`/notices/${editingNotice.id}`, newNotice);
+        addToast("Notice updated successfully!", "success");
+      } else {
+        await api.post("/notices", newNotice);
+        addToast("Notice published successfully!", "success");
+      }
+
       setIsModalOpen(false);
+      setEditingNotice(null);
       setNewNotice({ title: "", content: "", audience: 0 });
       await fetchNotices();
     } catch (err) {
       console.error(err);
-      addToast("Failed to publish notice", "error");
+      addToast(editingNotice ? "Failed to update notice" : "Failed to publish notice", "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -98,7 +134,7 @@ export default function AdminNoticesPage() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="gap-2 cursor-pointer">
+        <Button onClick={openCreateModal} className="gap-2 cursor-pointer">
           <Plus className="w-4 h-4" /> Publish Notice
         </Button>
       </div>
@@ -117,15 +153,26 @@ export default function AdminNoticesPage() {
               key={notice.id}
               className="p-6 rounded-2xl border transition-all relative bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
             >
-              <button
-                onClick={() => handleDelete(notice.id)}
-                className="absolute top-4 right-4 p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
-                title="Delete Notice"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="absolute top-4 right-4 flex items-center gap-1">
+                <button
+                  onClick={() => openEditModal(notice)}
+                  className="p-2 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors cursor-pointer"
+                  title="Edit Notice"
+                  aria-label={`Edit ${notice.title}`}
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(notice.id)}
+                  className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                  title="Delete Notice"
+                  aria-label={`Delete ${notice.title}`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
               
-              <div className="mb-4 pr-8 space-y-1">
+              <div className="mb-4 pr-20 space-y-1">
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                     {notice.title}
@@ -147,12 +194,14 @@ export default function AdminNoticesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="font-bold text-lg text-slate-900 dark:text-white">Create Notice</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white">
+                {editingNotice ? "Edit Notice" : "Create Notice"}
+              </h3>
+              <button onClick={closeModal} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleCreate} className="p-4 space-y-4">
+            <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Title
@@ -180,11 +229,11 @@ export default function AdminNoticesPage() {
                 />
               </div>
               <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                <Button type="button" variant="outline" onClick={closeModal} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button type="submit" variant="primary">
-                  Publish Notice
+                <Button type="submit" variant="primary" isLoading={isSubmitting}>
+                  {editingNotice ? "Save Changes" : "Publish Notice"}
                 </Button>
               </div>
             </form>

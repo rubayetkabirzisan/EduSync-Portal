@@ -189,13 +189,15 @@ export interface AdminDashboardStatsDto {
 }
 
 // ── Notices ─────────────────────────────────────────────────────────
+export type NoticeAudience = 0 | 1 | 2;
+
 export interface Notice {
   id: string;
   title: string;
   content: string;
-  authorId: string;
-  authorName: string;
-  isPriority: boolean;
+  audience: NoticeAudience;
+  createdById: string;
+  createdByName: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -203,13 +205,13 @@ export interface Notice {
 export interface CreateNoticeRequest {
   title: string;
   content: string;
-  isPriority: boolean;
+  audience: NoticeAudience;
 }
 
 export interface UpdateNoticeRequest {
   title?: string;
   content?: string;
-  isPriority?: boolean;
+  audience?: NoticeAudience;
 }
 
 // ── Leaves ──────────────────────────────────────────────────────────
@@ -281,9 +283,7 @@ export interface AppNotification {
   userId: string;
   title: string;
   message: string;
-  type: string; // e.g. "Assignment", "Leave", "Scholarship", "General"
   isRead: boolean;
-  relatedEntityId?: string;
   createdAt: string;
 }
 

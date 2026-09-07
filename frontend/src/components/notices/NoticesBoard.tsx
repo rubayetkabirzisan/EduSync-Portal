@@ -2,12 +2,16 @@
 
 import React, { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { Notice, PagedResponse } from "@/lib/types";
-import { Badge } from "@/components/ui/Badge";
-import { BellRing, Calendar, Megaphone, User, Info } from "lucide-react";
+import { Notice } from "@/lib/types";
+import { BellRing, Calendar, User, Info } from "lucide-react";
 
 interface NoticesBoardProps {
   subtitle?: string;
+}
+
+async function getNotices() {
+  const response = await api.get<Notice[]>("/notices");
+  return response.data;
 }
 
 export function NoticesBoard({ subtitle = "Important updates from the administration." }: NoticesBoardProps) {
@@ -15,20 +19,23 @@ export function NoticesBoard({ subtitle = "Important updates from the administra
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchNotices();
-  }, []);
+    let cancelled = false;
 
-  const fetchNotices = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get<PagedResponse<Notice>>("/notices?pageSize=50");
-      setNotices(res.data.items || []);
-    } catch (err) {
-      console.error("Failed to load notices:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    getNotices()
+      .then((data) => {
+        if (!cancelled) setNotices(data);
+      })
+      .catch((err) => {
+        console.error("Failed to load notices:", err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -58,21 +65,11 @@ export function NoticesBoard({ subtitle = "Important updates from the administra
           notices.map((notice) => (
             <div
               key={notice.id}
-              className={`p-6 rounded-2xl border transition-all ${
-                notice.isPriority
-                  ? "bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/50"
-                  : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:shadow-md"
-              }`}
+              className="p-6 rounded-2xl border transition-all bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:shadow-md"
             >
               <div className="flex justify-between items-start gap-4 mb-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    {notice.isPriority && (
-                      <Badge variant="error" className="animate-pulse">
-                        <Megaphone className="w-3 h-3 mr-1" />
-                        Urgent
-                      </Badge>
-                    )}
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                       {notice.title}
                     </h3>
@@ -80,7 +77,7 @@ export function NoticesBoard({ subtitle = "Important updates from the administra
                   <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 font-medium">
                     <span className="flex items-center gap-1">
                       <User className="w-3.5 h-3.5" />
-                      {notice.authorName}
+                      {notice.createdByName}
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" />

@@ -2,11 +2,15 @@
 
 import React, { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { Notice, CreateNoticeRequest, PagedResponse } from "@/lib/types";
-import { Badge } from "@/components/ui/Badge";
+import { Notice, CreateNoticeRequest } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/toast-context";
-import { BellRing, Megaphone, Trash2, Plus, Info, X } from "lucide-react";
+import { BellRing, Trash2, Plus, Info, X } from "lucide-react";
+
+async function getAllNotices() {
+  const response = await api.get<Notice[]>("/notices/all");
+  return response.data;
+}
 
 export default function AdminNoticesPage() {
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -17,18 +21,33 @@ export default function AdminNoticesPage() {
   const [newNotice, setNewNotice] = useState<CreateNoticeRequest>({
     title: "",
     content: "",
-    isPriority: false,
+    audience: 0,
   });
 
   useEffect(() => {
-    fetchNotices();
-  }, []);
+    let cancelled = false;
+
+    getAllNotices()
+      .then((data) => {
+        if (!cancelled) setNotices(data);
+      })
+      .catch((err) => {
+        console.error("Failed to load notices:", err);
+        addToast("Failed to load notices", "error");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addToast]);
 
   const fetchNotices = async () => {
     try {
       setLoading(true);
-      const res = await api.get<PagedResponse<Notice>>("/notices?pageSize=50");
-      setNotices(res.data.items || []);
+      setNotices(await getAllNotices());
     } catch (err) {
       console.error("Failed to load notices:", err);
       addToast("Failed to load notices", "error");
@@ -43,8 +62,8 @@ export default function AdminNoticesPage() {
       await api.post("/notices", newNotice);
       addToast("Notice published successfully!", "success");
       setIsModalOpen(false);
-      setNewNotice({ title: "", content: "", isPriority: false });
-      fetchNotices();
+      setNewNotice({ title: "", content: "", audience: 0 });
+      await fetchNotices();
     } catch (err) {
       console.error(err);
       addToast("Failed to publish notice", "error");
@@ -96,11 +115,7 @@ export default function AdminNoticesPage() {
           notices.map((notice) => (
             <div
               key={notice.id}
-              className={`p-6 rounded-2xl border transition-all relative ${
-                notice.isPriority
-                  ? "bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/50"
-                  : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
-              }`}
+              className="p-6 rounded-2xl border transition-all relative bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
             >
               <button
                 onClick={() => handleDelete(notice.id)}
@@ -112,18 +127,12 @@ export default function AdminNoticesPage() {
               
               <div className="mb-4 pr-8 space-y-1">
                 <div className="flex items-center gap-2">
-                  {notice.isPriority && (
-                    <Badge variant="error" className="animate-pulse">
-                      <Megaphone className="w-3 h-3 mr-1" />
-                      Urgent
-                    </Badge>
-                  )}
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                     {notice.title}
                   </h3>
                 </div>
                 <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  Published on {new Date(notice.createdAt).toLocaleString()} by {notice.authorName}
+                  Published on {new Date(notice.createdAt).toLocaleString()} by {notice.createdByName}
                 </div>
               </div>
               <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
@@ -170,18 +179,6 @@ export default function AdminNoticesPage() {
                   placeholder="Write the announcement details here..."
                 />
               </div>
-              <label className="flex items-center space-x-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={newNotice.isPriority}
-                  onChange={(e) => setNewNotice({ ...newNotice, isPriority: e.target.checked })}
-                  className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
-                />
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
-                  Mark as Priority/Urgent
-                </span>
-              </label>
-              
               <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
                 <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
                   Cancel

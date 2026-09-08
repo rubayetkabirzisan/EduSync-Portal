@@ -1,127 +1,198 @@
-# EduSync Portal - Assignment & Submission Management System
+# EduSync Portal
 
-A role-based school/college application built as a recruitment project, evaluating requirements understanding, system design, API development, frontend implementation, and testing.
+EduSync Portal is a role-based university and school management application built with Next.js, ASP.NET Core, and PostgreSQL. It provides dedicated workflows for administrators, teachers, and students while enforcing authorization in both the frontend and backend.
 
-## 🌐 Live Demo
-The application is fully containerized, CI/CD automated, and deployed to the cloud!
-* **Live Site (Frontend):** [https://edu-sync-portal.vercel.app](https://edu-sync-portal.vercel.app)
-* **API Backend:** Render.com
-* **Database:** Supabase PostgreSQL
+## Live application
 
-## 🚀 Project Overview
-EduSync Portal is a modern, robust, and highly secure web application that allows teachers to create and grade assignments, students to submit their work, and administrators to oversee the entire educational ecosystem. 
+- Frontend: [https://edu-sync-portal.vercel.app](https://edu-sync-portal.vercel.app)
+- Backend: Render
+- Database: Supabase PostgreSQL
 
-It implements strict Role-Based Access Control (RBAC), preventing unauthorized access across all API endpoints and frontend routes.
+## Features
 
-## ✨ Core Features
-*   **Role-Based Dashboards:** Dedicated, secure portals for Admins, Teachers, and Students.
-*   **Assignment Lifecycle:** Teachers can draft, publish, and grade assignments with feedback. Students can submit and update their work before deadlines.
-*   **Automated Validation:** Business logic strictly enforced (e.g., impossible to grade beyond max marks, impossible to submit to a draft assignment).
-*   **Security Hardening:** Passed a comprehensive security audit (resolving 19 QA/Security issues). Status-change endpoints are whitelisted to prevent workflow bypass. Student endpoints enforce class membership and published-status checks to prevent IDOR attacks.
-*   **Email Notifications:** Integrates with Resend API to automatically alert students when new assignments are published or their submissions are graded.
-*   **Premium UI/UX:** Responsive, fully interactive glassmorphism design powered by Tailwind CSS.
+### Administration
 
-## 🛠️ Technology Stack
-*   **Frontend:** Next.js 14, React, TypeScript, Tailwind CSS (with Glassmorphism design), Axios.
-*   **Backend:** ASP.NET Core Web API (.NET 10), C#, Entity Framework Core.
-*   **Database:** PostgreSQL.
-*   **Authentication:** JWT (JSON Web Tokens).
-*   **Email:** Resend.com API (for automated notifications).
-*   **Testing:** xUnit (Backend Unit Tests), Playwright (E2E UI Tests).
+- Manage users, classes, sections, subjects, and teaching assignments.
+- Publish, edit, and delete notices. Notice mutations are restricted to administrators by the API.
+- Create, edit, and delete examination schedules with room and class conflict detection.
+- Review leave and scholarship applications.
+- Move scholarship applications through review, approval, rejection, and disbursement states.
+- Publish subject syllabus content used by student course recommendations.
 
-## 🗂️ Project Structure
-*   `/frontend` - Contains the Next.js application.
-*   `/backend/src/Api` - The ASP.NET Core API entry point.
-*   `/backend/src/Application` - Business logic and DTOs.
-*   `/backend/src/Domain` - Entities and Enums.
-*   `/backend/src/Infrastructure` - EF Core DB Context, Migrations, and database seeding.
-*   `/backend/tests/Api.UnitTests` - xUnit tests for the backend.
-*   `/tests/e2e` - Playwright E2E UI testing suite.
+### Teachers
 
-## ⚙️ Setup & Run Instructions
+- Create draft or published assignments for assigned classes and subjects.
+- Review submissions, award marks, and provide feedback.
+- Record attendance as present, late, excused, or absent.
+- Participate in the faculty and student community chat.
 
-### 🚀 Quick Start (Docker - Recommended)
-If you have Docker Desktop installed, you can spin up the entire stack (Database, API, and Frontend) with a single command.
-1. Open a terminal in the root directory.
-2. Run: `docker compose up -d`
-3. Access the web app at **http://127.0.0.1:3000** and the API Swagger docs at **http://127.0.0.1:5080/swagger**.
+### Students
 
----
+- View and submit published class assignments.
+- Update eligible submissions before the deadline.
+- View marks and teacher feedback.
+- Submit and update pending leave applications.
+- Browse scholarships and track application status.
+- View examination schedules and attendance history.
+- Receive data-driven course recommendations and open published syllabi.
+- Use the portal assistant for common workflow questions.
 
-### 1. Manual Database Setup (Supabase / PostgreSQL)
-The backend utilizes Entity Framework Core and is configured to connect to PostgreSQL. It securely loads credentials using the `DotNetEnv` package.
+### Platform capabilities
 
-1. Create a new file named `.env` in the `backend/` directory.
-2. Add your database connection string using the following exact variable name:
-```env
-ConnectionStrings__DefaultConnection="Host=aws-0-eu-central-1.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.[project_id];Password=[your_password]"
+- JWT authentication and role-based API authorization.
+- SignalR real-time chat with persisted message history.
+- In-app and optional email notifications.
+- Responsive light and dark interfaces.
+- EF Core migrations and deterministic demo-data seeding.
+- Automated backend, frontend, Docker, and browser testing in GitHub Actions.
+
+## Technology stack
+
+- Frontend: Next.js 16.3, React, TypeScript, Tailwind CSS, Axios, SignalR client.
+- Backend: ASP.NET Core Web API on .NET 10, C#, Entity Framework Core, SignalR.
+- Database: PostgreSQL locally or Supabase in production.
+- Chatbot service: Django and ChatterBot.
+- Testing: xUnit, EF Core InMemory, and Playwright.
+- Deployment: Docker Compose locally, Vercel frontend, Render services, and Supabase PostgreSQL.
+
+## Repository structure
+
+```text
+frontend/                         Next.js application
+backend/src/Api/                  API entry point and controllers
+backend/src/Application/          DTOs, validation, and interfaces
+backend/src/Domain/               Entities and enums
+backend/src/Infrastructure/       EF Core, migrations, seeding, and services
+backend/tests/Api.UnitTests/      Backend regression tests
+chatterbot/                       Django chatbot service
+tests/e2e/                        Playwright golden-path tests
+.github/workflows/ci.yml          CI/CD pipeline
+QA_Strategy.md                    Quality assurance strategy and test report
 ```
-3. If testing email notifications, add your Resend API Key:
-```env
-Resend__ApiKey=re_your_api_key_here
-```
-*(Note: If you do not provide a `.env` file, the API will automatically fall back to the local development database specified in `appsettings.Development.json`.)*
 
-3. Apply the initial EF Core migrations (the API will automatically run these on startup, but you can force them if needed):
+## Configuration
+
+Real environment files are ignored by Git. Use [.env.example](./.env.example) as the configuration reference and never commit production credentials.
+
+Important settings include:
+
+```env
+ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=assignment_system;Username=postgres;Password=postgres
+Jwt__Secret=replace-with-a-long-random-string-min-32-chars
+Jwt__Issuer=assignment-system-api
+Jwt__Audience=assignment-system-client
+ChatbotApiBaseUrl=http://localhost:8000/api/
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5080/api
+DJANGO_SECRET_KEY=replace-with-a-long-random-string
+```
+
+For manual backend development, place backend settings in `backend/.env`. For Docker Compose, place Compose variables in `.env` at the repository root. The frontend reads its local public API URL from `frontend/.env.local`.
+
+## Run with Docker
+
+Docker Desktop is the simplest way to start PostgreSQL, the API, chatbot service, and frontend together:
+
+```bash
+docker compose up --build -d
+```
+
+Services:
+
+- Frontend: `http://127.0.0.1:3000`
+- API: `http://127.0.0.1:5080`
+- API health: `http://127.0.0.1:5080/health`
+- Chatbot: `http://127.0.0.1:8000`
+
+The API applies EF Core migrations and seeds demo data during the first startup of an empty database.
+
+To stop the stack without deleting data:
+
+```bash
+docker compose down
+```
+
+To recreate a completely clean local database:
+
+```bash
+docker compose down --volumes --remove-orphans
+docker compose up --build -d
+```
+
+The first command permanently deletes the local Docker PostgreSQL volume. Do not use it when that data must be preserved.
+
+## Run manually
+
+### Backend
+
 ```bash
 cd backend/src/Api
-dotnet ef database update
+dotnet restore
+dotnet run
 ```
 
-### 2. Running the Backend (.NET)
-1. Navigate to the API folder:
-   ```bash
-   cd backend/src/Api
-   ```
-2. Start the server:
-   ```bash
-   dotnet run
-   ```
-3. The API will start on **http://127.0.0.1:5080**. You can view the interactive Swagger/OpenAPI documentation at `http://127.0.0.1:5080/swagger`.
+The development API runs at `http://127.0.0.1:5080`. Swagger is available at `http://127.0.0.1:5080/swagger` in the Development environment.
 
-### 3. Running the Frontend (Next.js)
-1. Open a new terminal and navigate to the frontend folder:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the frontend server, binding specifically to IPv4 to prevent Windows/Node.js loopback networking quirks:
-   ```bash
-   npx next dev -H 127.0.0.1
-   ```
-4. Access the web app at **http://127.0.0.1:3000**.
+### Frontend
 
-## 🔑 Demo Credentials
-The database automatically seeds these accounts on startup. You can also use the "Quick-Fill" buttons directly on the login page!
+```bash
+cd frontend
+npm install
+npx next dev -H 127.0.0.1
+```
 
-| Role    | Email                  | Password   |
-| ------- | ---------------------- | ---------- |
-| Admin   | admin@school.test      | Passw0rd!  |
-| Teacher | teacher1@school.test   | Passw0rd!  |
-| Student | student@school.test    | Passw0rd!  |
+### Chatbot service
 
-## 🧪 Testing
+Configure `chatterbot/.env`, install the Python dependencies, apply the Django migrations, and start the service:
 
-### Backend Unit Tests (xUnit)
-8 unit tests cover core business rules, authorization constraints, and security edge cases:
-*   Authorization denial when a teacher is not assigned to a class/subject.
-*   Draft → Published lifecycle transition verification.
-*   Marks boundary enforcement (cannot exceed max marks).
-*   Student cross-class submission rejection.
-*   Graded submission immutability (cannot update after grading).
-*   Deadline enforcement on submission updates.
-*   Status-change endpoint whitelist (blocks `Graded` bypass via `ChangeStatus`).
+```bash
+cd chatterbot
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8000
+```
+
+## Demo credentials
+
+These accounts are created only when the application seeds an empty database:
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@school.test` | `Passw0rd!` |
+| Teacher | `teacher1@school.test` | `Passw0rd!` |
+| Student | `student@school.test` | `Passw0rd!` |
+
+If the accounts were edited in a persistent database, the quick-fill credentials will no longer authenticate. Recreate only a disposable Docker database or restore the account values through an authorized administration workflow.
+
+## Testing
+
+### Backend suite
+
+The backend currently contains 13 automated tests covering assignment authorization, status transitions, marks and deadline boundaries, AI recommendations, chatbot fallback behavior, demo credential seeding, and migration integrity.
 
 ```bash
 cd backend
-dotnet test
+dotnet test tests/Api.UnitTests/Api.UnitTests.csproj
 ```
 
-### End-to-End Tests (Playwright)
-An automated browser script simulates the entire "Golden Path" lifecycle: Teacher creates assignment $\to$ Student submits $\to$ Teacher grades $\to$ Student verifies grade.
+### Frontend production checks
+
+```bash
+cd frontend
+npx tsc --noEmit
+npm run build
+```
+
+### Playwright golden path
+
+The E2E test runs the complete teacher-to-student workflow in Chromium and Firefox:
+
+1. Teacher creates and publishes an assignment.
+2. Student submits work.
+3. Teacher grades the submission.
+4. Student verifies the grade and feedback.
+
+Run it against a healthy stack with the documented demo credentials:
+
 ```bash
 cd tests/e2e
 npm install
@@ -129,10 +200,25 @@ npx playwright install
 npx playwright test --workers=1
 ```
 
-## 📝 Assumptions & Extra Features
-*   **IPv4 Enforcement:** To bypass a known cross-origin networking bug in the Windows Playwright WebKit engine, the entire stack (`launchSettings.json`, `.env.local`, and `playwright.config.ts`) has been hardcoded to use `127.0.0.1` instead of `localhost`.
-*   **Pagination & Filtering:** All data-heavy endpoints in the backend and frontend utilize `page`, `pageSize`, and status filtering to ensure the app remains highly performant at scale.
-*   **Aesthetics:** I prioritized a premium, responsive "Glassmorphism" UI in Tailwind CSS rather than basic HTML tables to demonstrate strong frontend design capabilities.
+The test is intentionally sequential because both browser projects mutate the same database.
 
-### Known Limitations
-*   **No File Uploads:** For simplicity, the assignment submission process currently accepts rich-text answers rather than physical PDF/Docx file uploads.
+## Continuous integration
+
+The GitHub Actions pipeline performs the following checks:
+
+1. Restores, builds, and tests the .NET backend.
+2. Builds the Next.js production bundle.
+3. Builds the backend and frontend Docker images.
+4. Removes the disposable E2E database volume and starts a clean stack.
+5. Polls the API and frontend until they are actually ready.
+6. Verifies the seeded teacher and student credentials.
+7. Runs the Playwright golden path with one worker.
+8. Uploads the Playwright report and prints Docker logs when a failure occurs.
+
+The migration integrity regression test specifically ensures the `Exams` table is created before later migrations add `MaxMarks`.
+
+## Known limitations
+
+- Assignment submissions currently accept text rather than uploaded files.
+- The course advisor is deterministic and database-driven; it does not call a hosted generative-AI model.
+- The assistant includes fast portal-help responses and can fall back to the separately deployed Django chatbot service.

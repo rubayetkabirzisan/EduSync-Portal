@@ -1,4 +1,26 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+async function loginAs(page: Page, email: string, password: string, expectedPath: string) {
+  await page.fill('#email-input', email);
+  await page.fill('#password-input', password);
+
+  const loginResponsePromise = page.waitForResponse(
+    response =>
+      response.request().method() === 'POST' &&
+      new URL(response.url()).pathname.endsWith('/api/auth/login'),
+    { timeout: 20_000 },
+  );
+
+  await page.click('#login-submit-btn');
+  const loginResponse = await loginResponsePromise;
+  const responseBody = await loginResponse.text();
+
+  expect(
+    loginResponse.status(),
+    `Login failed for ${email}: ${responseBody}`,
+  ).toBe(200);
+  await expect(page).toHaveURL(expectedPath, { timeout: 15_000 });
+}
 
 test.describe('EduSync Golden Path (Teacher -> Student -> Teacher -> Student)', () => {
   const teacherEmail = 'teacher1@school.test';
@@ -25,13 +47,7 @@ test.describe('EduSync Golden Path (Teacher -> Student -> Teacher -> Student)', 
     await page.waitForTimeout(500);
 
     // Login as Teacher
-    await page.fill('#email-input', teacherEmail);
-    await page.fill('#password-input', password);
-    await page.waitForTimeout(500);
-    await page.click('#login-submit-btn');
-
-    // Ensure dashboard loads
-    await expect(page).toHaveURL('/teacher');
+    await loginAs(page, teacherEmail, password, '/teacher');
 
     // Navigate to Assignments
     await page.goto('/teacher/assignments');
@@ -78,12 +94,7 @@ test.describe('EduSync Golden Path (Teacher -> Student -> Teacher -> Student)', 
     // 2. STUDENT: SUBMIT ASSIGNMENT
     // ==========================================
     // Login as Student
-    await page.fill('#email-input', studentEmail);
-    await page.fill('#password-input', password);
-    await page.waitForTimeout(500);
-    await page.click('#login-submit-btn');
-
-    await expect(page).toHaveURL('/student');
+    await loginAs(page, studentEmail, password, '/student');
 
     // Navigate to Class Tasks (Assignments)
     await page.goto('/student/assignments');
@@ -108,12 +119,7 @@ test.describe('EduSync Golden Path (Teacher -> Student -> Teacher -> Student)', 
     // 3. TEACHER: GRADE SUBMISSION
     // ==========================================
     // Login as Teacher
-    await page.fill('#email-input', teacherEmail);
-    await page.fill('#password-input', password);
-    await page.waitForTimeout(500);
-    await page.click('#login-submit-btn');
-
-    await expect(page).toHaveURL('/teacher');
+    await loginAs(page, teacherEmail, password, '/teacher');
 
     // Go to submissions
     await page.goto('/teacher/submissions');
@@ -139,12 +145,7 @@ test.describe('EduSync Golden Path (Teacher -> Student -> Teacher -> Student)', 
     // 4. STUDENT: VERIFY GRADE
     // ==========================================
     // Login as Student
-    await page.fill('#email-input', studentEmail);
-    await page.fill('#password-input', password);
-    await page.waitForTimeout(500);
-    await page.click('#login-submit-btn');
-
-    await expect(page).toHaveURL('/student');
+    await loginAs(page, studentEmail, password, '/student');
 
     // Navigate to Class Tasks (Assignments) to verify it shows as Graded there first
     await page.goto('/student/assignments');
